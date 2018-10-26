@@ -19,36 +19,26 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 package br.ufla.dcc.PingPong.XMac;
 
 
+import static br.ufla.dcc.PingPong.routing.BackboneRoutingPacketType.SWITCH_SELF_AND_BROADCAST;
+
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
-import br.ufla.dcc.PingPong.ToolsStatisticsSimulation;
 import br.ufla.dcc.PingPong.Phy.ColisionDetectEvent;
 import br.ufla.dcc.PingPong.Phy.EventCarrierSense;
 import br.ufla.dcc.PingPong.Phy.EventPhyTurnRadio;
 import br.ufla.dcc.PingPong.Phy.StartOfFrameDelimiter;
-import br.ufla.dcc.PingPong.XMac.XMacRadioState;
-import br.ufla.dcc.PingPong.XMac.XMacState;
-import br.ufla.dcc.PingPong.XMac.XMacStateTypes;
 import br.ufla.dcc.PingPong.XMac.Stats.Simulation;
 import br.ufla.dcc.PingPong.node.AppPacket;
-import br.ufla.dcc.grubix.simulator.node.Link;
-import br.ufla.dcc.grubix.simulator.node.MACLayer;
-import br.ufla.dcc.grubix.simulator.node.MACState;
-import br.ufla.dcc.grubix.simulator.node.Node;
-import br.ufla.dcc.PingPong.node.PingPongWakeUpCall;
 import br.ufla.dcc.PingPong.node.RadioState;
-import br.ufla.dcc.PingPong.routing.ExpandedBackboneRoutingPacket;
-import br.ufla.dcc.PingPong.testing.SingleNodeDebugger;
-import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.PingPong.routing.BackboneRoutingPacket;
-import br.ufla.dcc.PingPong.routing.BackboneRoutingPacketType;
+import br.ufla.dcc.PingPong.routing.ExpandedBackboneRoutingPacket;
+import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.Address;
 import br.ufla.dcc.grubix.simulator.Direction;
 import br.ufla.dcc.grubix.simulator.LayerType;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.CrossLayerEvent;
 import br.ufla.dcc.grubix.simulator.event.LogLinkPacket;
-import br.ufla.dcc.grubix.simulator.event.MACPacket;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
 import br.ufla.dcc.grubix.simulator.event.Packet;
 import br.ufla.dcc.grubix.simulator.event.SendingTerminated;
@@ -56,14 +46,11 @@ import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
+import br.ufla.dcc.grubix.simulator.node.Link;
+import br.ufla.dcc.grubix.simulator.node.MACLayer;
+import br.ufla.dcc.grubix.simulator.node.MACState;
 import br.ufla.dcc.grubix.xml.ConfigurationException;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
-
-import java.io.FileNotFoundException;
-import java.io.UnsupportedEncodingException;
-import java.util.Random;
-
-import static br.ufla.dcc.PingPong.routing.BackboneRoutingPacketType.*;
 
 
 
@@ -116,10 +103,6 @@ public class XMac extends MACLayer {
  	
  	/** Ferramentas auxiliares diversas */
  	ToolsMiscellaneous misc = ToolsMiscellaneous.getInstance();
-
-	public SingleNodeDebugger nodeDebugger;
-
- 	 
     
     /**
      * Inicializa a configuração do objeto
@@ -134,11 +117,10 @@ public class XMac extends MACLayer {
            Param2: Potência máximo de transmissão
            Param3: Número de pacotes a serem transmitidos em uma fila */
         macState = new MACState(raDefaultPolicy, 16.0, 0);
-
-        nodeDebugger = new SingleNodeDebugger();
         
         // Define o estado inicial do MAC em SLEEP e o contador de sequência de estados em zero.
-        xState = new XMacState(XMacStateTypes.SLEEP, 0);         
+        xState = new XMacState(XMacStateTypes.SLEEP, 0);
+        xState.id = this.node.getId();
 
         // Define o estado inicial do rádio
         xRadioState = new XMacRadioState(RadioState.OFF);
@@ -148,9 +130,6 @@ public class XMac extends MACLayer {
         
         // Cria a instância da máquina de estados
         xStateMachine = new XMacStateMachine(sender, xState, xRadioState, xConf);
-        
-        xState.nodeDebugger = nodeDebugger;
-        xStateMachine.nodeDebugger = nodeDebugger;
         
         // Ferramentas de depuração -------------------------
         if (statistics.xConf == null) {
@@ -304,8 +283,6 @@ public class XMac extends MACLayer {
     		xConf.normalizeMaxPreambles(xState.isBackboneNode());
     		xStateMachine.changeStateBootNode();
     		createWucTimeOut();
-    		SingletonTestResult.getInstance().setEnabled(true);
-    		nodeDebugger.setEnabled(true);
     		if (xState.isBackboneNode()) {
     			System.err.println("CS: " + xConf.getStepsCS());
     			System.err.println("Sleep: " + xConf.getStepsSleep());

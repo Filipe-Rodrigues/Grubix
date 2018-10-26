@@ -62,11 +62,12 @@ public class BackboneRegularNode extends ApplicationLayer {
 	}
 	
 	public void processWakeUpCall(WakeUpCall wuc) {
-		double currentTime = SimulationManager.getInstance().getCurrentTime();
-		SingletonTestResult.getInstance().setStartingTime(currentTime);
 		//System.out.println("########################");
-		
 		if (wuc instanceof PingPongwuc) {
+			double currentTime = SimulationManager.getInstance().getCurrentTime();
+			SingletonTestResult.getInstance().setEnabled(true);
+			SingletonTestResult.getInstance().setStartingTime(currentTime);
+			
 			Pacote pk2 = new Pacote(sender,NodeId.get(2));
 			pk2.setCont(1);
 			sendPacket(pk2);

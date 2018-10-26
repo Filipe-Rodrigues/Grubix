@@ -21,12 +21,10 @@ package br.ufla.dcc.PingPong.XMac;
 
 import br.ufla.dcc.PingPong.XMac.XMacPacket;
 import br.ufla.dcc.PingPong.XMac.XMacStateTypes;
-import br.ufla.dcc.PingPong.testing.SingleNodeDebugger;
+import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.LayerState;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
-import br.ufla.dcc.grubix.simulator.kernel.Configuration;
-import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 
 /**
  * Classe que apresenta o status do XMac
@@ -75,10 +73,11 @@ public class XMacState extends LayerState {
 	/** Informação sobre atividade no canal, se há mensagem em trânsito */
     private boolean channelBusy = true;
     
-    /** Se pertence ao Backbone*/
+    /** Se pertence ao Backbone */
 	private boolean backboned;
 	
-	public SingleNodeDebugger nodeDebugger;
+	/** ID do nó atual */
+	public NodeId id;
     
 	/** Default constructor */
 	public XMacState(XMacStateTypes state, int seq) {
@@ -198,7 +197,7 @@ public class XMacState extends LayerState {
 	
 	public void setBackboneNodeState(boolean isBackbone) {
 		this.backboned = isBackbone;
-		nodeDebugger.setBackbone(isBackbone);
+		SingletonTestResult.getInstance().setNodeConfiguration(id, "SET_BACKBONE");
 	}
 	
 	public boolean isBackboneNode() {

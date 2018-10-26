@@ -1,6 +1,5 @@
 package br.ufla.dcc.PingPong.XMac;
 
-import br.ufla.dcc.PingPong.testing.SingleNodeDebugger;
 import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;

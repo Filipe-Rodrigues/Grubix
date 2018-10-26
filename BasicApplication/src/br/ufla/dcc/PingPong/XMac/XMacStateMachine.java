@@ -1,18 +1,13 @@
 package br.ufla.dcc.PingPong.XMac;
 
-import java.util.Random;
-
 import br.ufla.dcc.PingPong.ToolsDebug;
-import br.ufla.dcc.PingPong.node.AppPacket;
 import br.ufla.dcc.PingPong.node.RadioState;
-import br.ufla.dcc.PingPong.testing.SingleNodeDebugger;
 import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.Address;
 import br.ufla.dcc.grubix.simulator.Direction;
-import br.ufla.dcc.grubix.simulator.LayerType;
 import br.ufla.dcc.grubix.simulator.NodeId;
-import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
+import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 
 /** Classe que define os estados do XMac e suas respectivas durações
  * 
@@ -34,9 +29,6 @@ public class XMacStateMachine  {
 
     /** Objeto para realizar a depuração */
     ToolsDebug debug = ToolsDebug.getInstance();
-    
-    public SingleNodeDebugger nodeDebugger;
- 	
 
     /**
 	 * Default constructor 
@@ -96,8 +88,6 @@ public class XMacStateMachine  {
     		 para o nó. Se não, volta a dormir depois do tempo de CS */
             xState.setState(XMacStateTypes.SLEEP, xConf.getStepsSleep());
             xRadioState.setRadioState(RadioState.OFF); 
-            SingletonTestResult.getInstance().countCS();
-            nodeDebugger.countCS();
             
             break;
             
@@ -113,6 +103,9 @@ public class XMacStateMachine  {
             } else {
             	xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
                 xRadioState.setRadioState(RadioState.LISTENING);
+                SingletonTestResult.getInstance().countCS();
+                //nodeDebugger.countCS();
+                SingletonTestResult.getInstance().setNodeConfiguration(address.getId(), "COUNT_CS");
             }
     		break;
     		
@@ -430,6 +423,9 @@ public class XMacStateMachine  {
     		// Quando o XMac vai iniciar o envio de RTS
             xState.setState(XMacStateTypes.CS_START, xConf.getStepsCS());
             xRadioState.setRadioState(RadioState.LISTENING);
+            SingletonTestResult.getInstance().countCS();
+            //nodeDebugger.countCS();
+            SingletonTestResult.getInstance().setNodeConfiguration(address.getId(), "COUNT_CS");
             break;
             
     	default:

@@ -23,7 +23,7 @@
         	<application>
                 <class>br.ufla.dcc.PingPong.node.BackboneRegularNode</class>
                 <params>
-                	<param name="appStartingCycle">1000</param>
+                	<param name="appStartingCycle">2000</param>
                 </params>
             </application>
             <operatingSystem>
@@ -42,7 +42,7 @@
                 <params>
                     <param name="cycleTime">0.1</param>
                     <param name="ackEnable">false</param>
-                    <param name="backboneFormingTime">10</param>
+                    <param name="backboneFormingTime">1000</param>
                 </params>
             </mac>
             <energyManager>

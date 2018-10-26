@@ -54,7 +54,7 @@ public class GeoRouting extends NetworkLayer {
 		if (closestId == null) {
 			System.err.println(this.id + " >>>> BURACO ENCONTRADO, SAINDO DA APLICAÇÃO!!!");
 			SingletonTestResult.getInstance().setEndingTime(-1);
-			SingletonTestResult.getInstance().writeResults();
+			SingletonTestResult.getInstance().printAllStats();
 			System.exit(1);
 		}
 		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);

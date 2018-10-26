@@ -10,8 +10,8 @@ public class Main {
 		try {
 			long startTime = System.currentTimeMillis();
 			//String path = "application_simples.xml";
-			//String path = "application_backbone1.xml";
-			String path = "application_backbone2.xml";
+			String path = "application_backbone1.xml";
+			//String path = "application_backbone2.xml";
 			//String path = args[0];
 			args = new String[1];
 			args[0] = path;
