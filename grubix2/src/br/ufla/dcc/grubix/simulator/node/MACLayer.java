@@ -1,0 +1,142 @@
+/********************************************************************************
+This file is part of ShoX.
+
+ShoX is free software; you can redistribute it and/or modify it under the terms
+of the GNU General Public License as published by the Free Software Foundation;
+either version 2 of the License, or (at your option) any later version.
+
+ShoX is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with 
+ShoX; if not, write to the Free Software Foundation, Inc., 51 Franklin Street,
+Fifth Floor, Boston, MA 02110-1301, USA
+
+Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
+********************************************************************************/
+
+package br.ufla.dcc.grubix.simulator.node;
+
+import br.ufla.dcc.grubix.simulator.Direction;
+import br.ufla.dcc.grubix.simulator.LayerException;
+import br.ufla.dcc.grubix.simulator.LayerType;
+import br.ufla.dcc.grubix.simulator.event.AirPerformCarrierSense;
+import br.ufla.dcc.grubix.simulator.event.Packet;
+import br.ufla.dcc.grubix.simulator.event.PhysicalLayerState;
+import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
+import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
+import br.ufla.dcc.grubix.simulator.node.metainf.DownwardsLLCMetaInfo;
+
+/**
+ * Abstract superclass for all types of MACLayers. 
+ * 
+ * Invariants:
+ * - The Mac Layer should flip the direction of packets when the receiver node is the sending node.
+ *  
+ * @author Andreas Kumlehn
+ */
+public abstract class MACLayer extends Layer {
+	/** the default bitrate adaptation policy, if no prolicy was submitted to a packet.	 */
+	protected BitrateAdaptationPolicy raDefaultPolicy;
+	
+	/** Stores all time properties of the physical layer necessary for the MAC to calculate its times. */
+	protected static PhysicalTimingParameters timings;
+	
+	/**
+	 * Constructor.
+	 *
+	 */
+	public MACLayer() {
+		super(LayerType.MAC);
+	}
+
+	/* (non-Javadoc)
+	 * @see br.ufla.dcc.grubix.simulator.node.Layer#lowerSAP(br.ufla.dcc.grubix.simulator.event.Packet)
+	 */
+	@Override
+	public void lowerSAP(Packet packet) throws LayerException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/**
+	 * with this method, a packet is sent along the desired direction to the next layer.
+	 * This method is just used, to set the radio state to WILL_SEND, if a packet is sent to the phy. 
+	 * 
+	 * @param packet the to be sent packet along the direction. 
+	 * @see br.ufla.dcc.grubix.simulator.node.Layer#sendPacket(br.ufla.dcc.grubix.simulator.event.Packet)
+	 */
+	@Override
+	public void sendPacket(Packet packet) {
+		if (!isSuspended()) {
+			if (packet.getDirection() ==  Direction.DOWNWARDS) {
+				PhysicalLayerState ps = (PhysicalLayerState) getNode().getLayerState(LayerType.PHYSICAL);
+				ps.setRadioState(RadioState.WILL_SEND);
+				getNode().setLayerState(LayerType.PHYSICAL, ps);
+			}
+		}
+		super.sendPacket(packet);
+	}
+
+	/* (non-Javadoc)
+	 * @see br.ufla.dcc.grubix.simulator.node.Layer#upperSAP(br.ufla.dcc.grubix.simulator.event.Packet)
+	 */
+	@Override
+	public void upperSAP(Packet packet) throws LayerException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/**
+	 * method to get a current status object.
+	 * @return the current status of the layer.
+	 */
+	public abstract MACState getState();
+
+	/**
+	 * generic method to start carrier sensing, leading to a MACCarrierSensing event as answer. Define
+	 * T as the length of the interval of time, starting with the call of this method, where no carrier   
+	 * gap of a duration of minFreeTime or greater was found. Define T2 as T + minFreeTime. The 
+	 * MACCarrierSensing event is issued after T2 + varFreeTime, when the carrier was free between T and  
+	 * T2, thus signaling a free carrier of the required minimal length. Or the event is issued after 
+	 * T2 + t (t < minFreeTime), when a carrier was sensed after T2, but before T2+varFreeTime, signaling 
+	 * an occupied carrier and allowing to change the backoff strategy.
+	 * 
+	 * @param minFreeTime the minimal required length of a phase with no detected carrier. 
+	 * @param varFreeTime the additional required time to check for an absent carrier before sending.
+	 */
+	public void startCarrierSense(double minFreeTime, double varFreeTime) {
+		WakeUpCall wuc = new AirPerformCarrierSense(getSender(), minFreeTime, minFreeTime, varFreeTime, false);
+		SimulationManager.enqueue(wuc, getId(), LayerType.AIR);
+	}
+	
+	/** @return false, if a carrier was sensed. */
+	public boolean foundInterferences() {
+		AirState as = (AirState) getNode().getLayerState(LayerType.AIR);
+		
+		return (as != null) && (as.getInterQueue().getCurrentInterference(getNode().getCurrentTime()) > 0.0);
+	}
+	
+	/**
+	 * @return All needed timing parameters, generated by the 802.11 PHY
+	 */
+	public static PhysicalTimingParameters getTimings() {
+		return timings;
+	}
+	
+	/**
+	 * get the link from the loglink layer meta data.
+	 * 
+	 * @param packet packet to look at
+	 * @return link meta data or null if not set
+	 */
+	public static Link getMetaDataLink(Packet packet) {
+		DownwardsLLCMetaInfo mi = packet.getMetaInfos().getDownwardsLLCMetaInfo();
+		if (mi == null) {
+			return null;
+		}
+		return mi.getLink();
+	}
+}
+

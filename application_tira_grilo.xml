@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="configuration.xsd">
+<description write="BasicApplication"/>
+<field>
+    <dimension x="100" y="100"/>
+</field>
+<physicalmodel>
+    <class>br.ufla.dcc.grubix.simulator.physical.UnitDisc</class>
+    <params>
+        <param name="reachableDistance">30</param>
+        <param name="interferenceDistance">30</param>
+    </params>
+</physicalmodel>
+<movementmanager>
+    <class>br.ufla.dcc.grubix.simulator.movement.NoMovement</class>
+</movementmanager>
+<bitmanglingmodel>
+    <class>br.ufla.dcc.grubix.simulator.physical.CollisionPacketMangler</class>
+</bitmanglingmodel>
+<nodes>
+    <node name="REGULAR" count="100">
+        <layers>
+        	<application>
+                <class>br.ufla.dcc.PingPong.node.BackboneRegularNode</class>
+                <params>
+                	<param name="appStartingCycle">110000</param>
+                </params>
+            </application>
+            <operatingSystem>
+                <class>br.ufla.dcc.grubix.simulator.node.user.os.NullOperatingSystemLayer</class>
+            </operatingSystem>
+            <network>
+                <class>br.ufla.dcc.PingPong.routing.BackboneRouting</class>
+                <params>
+                	<param name="xAxisLimit">500</param>
+                	<param name="yAxisLimit">500</param>
+                </params>
+                <!--<class>br.ufla.dcc.grubix.simulator.node.user.OptimalSourceRouting</class>-->
+            </network>
+            <logLink>
+                <class>br.ufla.dcc.PingPong.Llc.LogLinkControl</class>
+            </logLink>
+            <mac>
+                <class>br.ufla.dcc.PingPong.XMac.XMac</class>
+                <!--<class>br.ufla.dcc.grubix.simulator.node.user.MAC_IEEE802_11bg_DCF</class>-->
+                <params>
+                    <param name="cycleTime">0.1</param>
+                    <param name="ackEnable">false</param>
+                    <param name="backboneFormingTime">115000</param>
+                </params>
+            </mac>
+            <energyManager>
+                <class>br.ufla.dcc.grubix.simulator.node.energy.BasicEnergyManager</class>
+            </energyManager>
+            <physical>
+                <class>br.ufla.dcc.PingPong.Phy.PhysicalSimple</class>
+                <!--<class>br.ufla.dcc.grubix.simulator.node.user.PHY_802_11bg</class>-->
+                <params>
+                </params>
+            </physical>      
+        </layers>
+    </node>
+</nodes>
+<logging>
+    <log>true</log>
+    <nameHistoryFile>LogAppPingPong</nameHistoryFile>
+    <nameStatisticsFile>StatiticsLogAppPingPong</nameStatisticsFile>
+    <logClass>br.ufla.dcc.grubix.debug.compactlogging.XMLFileLogger</logClass>
+    <filter>
+        <description>Sample filter</description>
+        <logdata>true</logdata>
+        <acceptedtypes>
+            <class priority="off">br.ufla.dcc.grubix.simulator.event.user.OptSrcRoutingPacket</class>
+            <class priority="info">br.ufla.dcc.grubix.simulator.event.PhysicalPacket</class>
+            <class priority="info">br.ufla.dcc.grubix.simulator.event.Transmission</class>
+            <class priority="info">br.ufla.dcc.grubix.simulator.event.TransmissionBeginIncoming</class>
+            <class priority="info">br.ufla.dcc.grubix.simulator.event.TransmissionEndIncoming</class>
+            <class priority="info">br.ufla.dcc.grubix.simulator.event.TransmissionEndOutgoing</class>
+            <class priority="info">br.ufla.dcc.grubix.simulator.event.Movement</class>
+        </acceptedtypes>
+    </filter>
+</logging>
+<positions>
+    <generated>
+        <generator>
+            <!-- Define a posição dos nós informados baseado nos parametros -->
+            <!--<class>br.ufla.dcc.PingPong.PaxMac.PaxRandomStartPositions</class>-->
+            <!--<class>br.ufla.dcc.grubix.simulator.movement.FromFileStartPositions</class>-->
+            <class>br.ufla.dcc.PingPong.movement.BackboneRandomStartPositions</class>
+            <!--<class>br.ufla.dcc.grubix.simulator.movement.GridPositionGenerator</class>-->
+            <params>
+            	<!--<param name="xNodeDistance">20</param>-->
+            	<!--<param name="yNodeDistance">20</param>-->
+                <!-- Somente para PaxRandomStartPositions (posicoes x,y)-->
+                <!--<param name="sourceNodes">20,20</param>-->
+                <!--<param name="destinationNodes">480,480</param>-->
+                <!-- SOMENTE PARA BackboneRandomStartPositions -->
+                <param name="testingCase">2</param>
+                <param name="forceCenterNode">true</param>
+            </params>
+        </generator>
+        <targetfile>startpositions.xml</targetfile>
+    </generated>
+</positions>
+<!--Tempo total de simulação = stepspersecond * seconds-->
+<simulationtime stepspersecond="10000" base="seconds">15</simulationtime>
+</configuration>
