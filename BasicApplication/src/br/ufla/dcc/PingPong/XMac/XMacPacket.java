@@ -26,27 +26,23 @@ import br.ufla.dcc.grubix.simulator.event.LogLinkPacket;
 /**
  * Classe que implementa o pacote da camada MAC para o protocolo X-MAC. 
  * 
- *  @author Gustavo Araújo
  *  @author João Giacomin
- *  @version 22/06/2016
+ *  @version 18/03/2019
  */
 public class XMacPacket extends MACPacket { 
 				
 	
-	/** Número de sequência do pacote que será enviado */ 
-	private int sequenceNumber = 0;
-	
-	
 	/**
-	 * Default constructor of class Packet to create a terminal packet
+	 * Default constructor of class XMacPacket to create a terminal packet
 	 * with no enclosed packet.
 	 * @param sender Sender address of the packet
 	 * @param receiver Id of the packet's receiver
 	 * @param signalStrength The strength of the signal to transmit in mW
+	 * @param pkType The type of MACPacket (RTS, CTS, ACK)
 	 */
-	public XMacPacket(Address sender, NodeId receiver, double signalStrength, PacketType pkType) {
-		super(sender, receiver, signalStrength);
+	public XMacPacket(Address sender, NodeId receiver, PacketType pkType, double signalStrength) {
 		// Usado para criar pacotes do tipo RTS, CTS e ACK
+		super(sender, receiver, signalStrength);
 		setType(pkType);
 	}
 	
@@ -58,40 +54,21 @@ public class XMacPacket extends MACPacket {
 	 * 
 	 * @param sender Sender address of the packet
 	 * @param packet The packet to enclose inside the new packet.
-	 * @param sequence The sequence number of the packet
 	 */
-	public XMacPacket(Address sender, LogLinkPacket packet, int sequence) {
+	public XMacPacket(Address sender, LogLinkPacket packet, boolean ackReq) {
 		// Usado para criar apenas pacotes do tipo DATA
 		super(sender, packet);
 		setType(PacketType.DATA);
-		this.sequenceNumber = sequence;
+		setAckRequested(ackReq);
 	}
 	
 
 	/** Decrementa o contador de tentativas de envio de pacote existente na superclasse MACPacket.java */
-	public void decRetryCount() {
+	public int decRetryCount() {
 		int cont = getRetryCount(); 
 		if (cont > 0) cont--;
 		setRetryCount(cont);
-	}
-	
-	
-	/** Decrementa o contador de sequência do pacote */
-	public int decSeqNum() {
-		int cont = getSequenceNumber(); 
-		if (cont > 0) cont--;
-		setSequenceNumber(cont);
 		return cont;
 	}
 	
-	
-	/* Sets e Gets */
-	public int getSequenceNumber() {
-		return sequenceNumber;
-	}
-
-	public void setSequenceNumber(int num) {
-		this.sequenceNumber = num & XMacConstants.MAX_SEQUENCE;
-	}
-
 }

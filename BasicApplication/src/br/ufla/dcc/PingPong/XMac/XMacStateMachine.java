@@ -1,463 +1,526 @@
 package br.ufla.dcc.PingPong.XMac;
 
-import br.ufla.dcc.PingPong.ToolsDebug;
-import br.ufla.dcc.PingPong.node.RadioState;
-import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.Address;
-import br.ufla.dcc.grubix.simulator.Direction;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
-import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
+import br.ufla.dcc.PingPong.XMac.XMacState.XMacActionType;
+import br.ufla.dcc.PingPong.XMac.XMacState.XMacEventType;
+import br.ufla.dcc.PingPong.XMac.XMacState.XMacStateType;
 
 /** Classe que define os estados do XMac e suas respectivas durações
  * 
+ *  Usada pela XMac.java
+ * 
  * 	@author João Giacomin
- *  @author Gustavo Araújo
- *  @version 22/06/2016
+ *  @version 18/03/2019
  *
  */
 public class XMacStateMachine  {
 	
 	/** referência para xMacState */
     XMacState xState; 
-    /** referência para XMacRadioState */
-    XMacRadioState xRadioState;
     /** referência para XMacConfiguration */
     XMacConfiguration xConf;
     /** Endereço do nó atual */
     Address address;
-
-    /** Objeto para realizar a depuração */
-    ToolsDebug debug = ToolsDebug.getInstance();
+    
+    boolean debug = false;
 
     /**
 	 * Default constructor 
 	 */
-    public XMacStateMachine(Address address, XMacState xmacState, XMacRadioState xradioState, 
-    		XMacConfiguration xmacConfig) {
+    public XMacStateMachine(Address address, XMacState xmacState, XMacConfiguration xmacConfig) {
     	this.xState      = xmacState;
-    	this.xRadioState = xradioState; 
     	this.xConf       = xmacConfig;
     	this.address     = address;
 	}
 		
     
-    /** Função que faz a primeira mudança de estado do XMac. O nó irá entrar em modo SLEEP por um
-     tempo aleatório, antes de iniciar suas atividades */ 
-    public void changeStateBootNode() {
-    	// Se for necessário testar com seed fixa para cada nó
-    	//Random gerador = new Random(address.getId().asInt());
-        //int delay = gerador.nextInt(Integer.valueOf((int) Math.round(xConf.getStepsCycle())));
-        
-    	// Tempo pequeno aleatório em steps para ligar o nó sensor
-        double delay = ((int) (Math.random() * (xConf.getStepsCycle())));
-    	xState.setState(XMacStateTypes.SLEEP, delay);
-        xRadioState.setRadioState(RadioState.OFF);
+    /** Função para colocar na XMacState o novo estado da MAC e a ação a ser executada pela XMac.
+     * 
+     * @param newState = novo estado, para qual estado a MAC deverá ir
+     * @param delay    = qual o máximo tempo previsto para se manter nesse estado
+     * @param action   = qual ação imediata a MAC deverá executar
+     * @return         = retorna TRUE ao terminar de executar a função.
+     */
+    
+    private boolean setNewState (XMacStateType newState, double delay, XMacActionType action){
+		xState.setAction(action);
+    	return xState.setState(newState, delay);
     }
     
-    
-    /** Função que muda o estado do XMac e do radio quando o tempo do Wuc da XMac chega ao fim. 
-     * Ao ser chamada, verifica qual o estado atual, para então mudar o estado e definir o tempo 
-     * previsto para o estado atual.
+    /** Funçao para designação do próximo estado. 
+     *  Chamada pela XMac quando ocorre algum evento.
+     *  Retorna TRUE se uma nova WUC (marcação de tempo) deve ser colocada pela XMAC.
+     *  Se o retorno for FALSE, a XMAC não inicia uma nova WUC.
+     *  A cada decisão, uma ordem é estabelecida, para ser executada pela XMac,
+     *  como ligar ou desligar o rádio.
+     * 
+     *  @param  event =      o tipo de evendo recebido pela XMac
+     *  @return changeState: TRUE, indica que uma nova WUC deve ser criada; FALSE, não cria nova WUC
      */
-    public boolean changeStateTimeOut(WakeUpCall wuc) {
+    
+    public boolean changeState(XMacEventType event){
     	
-    	// Debug, escreve entrada no arquivo de depuração
-    	debug.writeIfNodes(debug.str("Estado Antes")+debug.strXLayer(xState, xRadioState)+
-    				debug.strWuc(wuc), address, new Integer[]{1});
+    	boolean changeState = false;
+    	xState.setAction(XMacActionType.CONTINUE);
     	
-        /* Verifica se o número do estado armazeno no WUC é o mesmo do estado atual. Se não for,
-         já houve mudança no estado do XMac antes do término do WUC, portanto esse WUC deve ser
-         ignorado, já que não é mais válido. */
-		if (xState.getStateSeqNum() != ((XMacWucTimeOut)wuc).getStateNumber()) {
-			debug.write(debug.str("AVISO! Número do estado não corresponde ao número do WUC"), address);
-			return false;        
-		}
-		
-		/* Se rádio está OFF e estado do XMac não é SLEEP, não prosseguir. Isso pode ocorrer se 
-		durante um CS_START receber um DATA indesejado */
-        if((xRadioState.getRadioState() == RadioState.OFF) && 
-        		(xState.getState() != XMacStateTypes.SLEEP)) {
-        	debug.printw("AVISO! Estado do radio: OFF e XMac: "+xState.getState(), address);
-        	return false;
-        }
-    	
+    	 	
     	switch (xState.getState()) {
-    	case CS:
-    		/* Se venceu o estado que verifica se algum vizinho está transmitindo alguma mensagem 
-    		 para o nó. Se não, volta a dormir depois do tempo de CS */
-            xState.setState(XMacStateTypes.SLEEP, xConf.getStepsSleep());
-            xRadioState.setRadioState(RadioState.OFF); 
-            
-            break;
-            
+
+    	
+
+    	/** ---------------------- Estado Sleep - inativo ---------------------- **/
+    	
     	case SLEEP:
-    		/* Se possui um pacote na XMacState e ele está direcionado para baixo, recomeça o 
-    		 envio do RTS. Caso o pacote seja para a camada acima, ou não tenha pacotes armazenados,
-    		 fica em CS */
-    		if (xState.getDataPkt() != null && 
-    				xState.getDataPkt().getDirection() == Direction.DOWNWARDS) { 
-            	/* Quando ocorre uma falha no envio de MSG, voltará aqui. Indica para a XMAC 
-            	 que deverá reiniciar o processo de envio de preâmbulos */
-            	xState.setRestartRTS(true);	
-            } else {
-            	xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-                xRadioState.setRadioState(RadioState.LISTENING);
-                SingletonTestResult.getInstance().countCS();
-                //nodeDebugger.countCS();
-                SingletonTestResult.getInstance().setNodeConfiguration(address.getId(), "COUNT_CS");
-            }
+
+    		switch (event){
+    		
+    		case TIME_OUT:
+    			if (xState.isDataPending()) { 
+    				/* Quando ocorre uma falha no envio de MSG, voltará aqui. */
+    				// Decrementa o número de chances que tem para tentar enviar DATA 
+    				if(xState.getDataPkt().decRetryCount() > 0){
+    					// Reiniciar o contador numCSstart, número de vezes que se tentou estabelecer comunicação   */
+        				xState.setRetryCSstart(xConf.getMaxBOstarts());
+    					changeState = setNewState(XMacStateType.CS_START, xConf.getStepsCS(), XMacActionType.ASK_CHANNEL);
+    					if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, Event = TIME_OUT com dataPending" );
+    				} else {
+    					changeState = setNewState(XMacStateType.CS, xConf.getStepsCS(), XMacActionType.TURN_ON);
+    					if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, Event = TIME_OUT, falhou envio de DATA" );
+    				}
+    			} else {
+    	        	changeState = setNewState(XMacStateType.CS, xConf.getStepsCS(), XMacActionType.TURN_ON);
+    	        	if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, Event = TIME_OUT" );
+    	        }
     		break;
     		
+    		case LOG_LINK:
+    			/* Uma ordem da Log Link Layer para enviar mensagem. Deve-se verificar se o canal está ocupado */
+    			xState.setRetryCSstart(xConf.getMaxBOstarts());
+    			changeState = setNewState(XMacStateType.CS_START, xConf.getStepsCS(), XMacActionType.ASK_CHANNEL);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, Event = LOG_LINK" );
+    		break;
+    		
+       		default:
+       			if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, evento não previsto" );
+			break;
+
+            }
+    	break;
+  
+    	/** ---------------- Estado Carrier Sense - Procura um preâmbulo (RTS) ----------------- **/
+    	
+    	case CS:
+    		
+    		switch (event){
+    		
+    		case TIME_OUT:
+    			/* Se venceu o tempo do estado que verifica se algum vizinho está transmitindo 
+    			 * alguma mensagem para o nó, é porque não havia transmissão, então volta a dormir  */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS, Event = TIME_OUT" );
+            break;
+    		
+    		case LOG_LINK:
+    			/* Uma ordem da Log Link Layer para enviar mensagem. Deve-se verificar se o canal está ocupado */
+    			xState.setRetryCSstart(xConf.getMaxBOstarts());
+    			changeState = setNewState(XMacStateType.CS_START, xConf.getStepsCS(), XMacActionType.ASK_CHANNEL);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS, Event = LOG_LINK" );
+        	break;
+        		
+    		case RTS_RECEIVED:
+    			/* Se recebeu uma mensagem RTS durante o CS, 
+    			 * verifique para quem é a mensagem e responda com CTS se necessário  */
+    			changeState = changeStateRTSreceived(XMacStateType.CS);
+    		break;
+    			
+    		default:
+    			/* Se recebeu um CTS ou ACK, então vá dormir.  */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS, Event = " + event);
+    		break;
+
+            }
+    	break;
+            
+        /** --------- Estado Carrier Sense Start - Verifica atividade no canal antes de enviar RTS  ----- **/
+    	
     	case CS_START:
-            /* Se venceu o estado que verifica se o canal está livre para iniciar a transmissão do RTS.
-             Agora em SENDING_MSG, a MAC aguarda um aviso vindo da PHY sobre o final da transmissão do
-             RTS. Funciona como Watch-dog. 
-             SendingPktType já foi definido na XMac em startSendDataProcess() */
-    		if (xState.isChannelBusy()) {
-        		/* Se o canal de comunicação estivesse ocupado, e não recebeu um evento de 
-        		 StartOfFrameDelimiter ou PACKET_RECEIVED é porque a mensagem era ACK (de DATA) que 
-        		 já terminou, e o canal está livre, ou é DATA que está sendo transmitido. De qualquer
-        		 forma, deve fazer um BackOff em Sleep. */
-        		xState.setState(XMacStateTypes.SLEEP, xConf.getStepsSleep() + xConf.getStepsEndTx());
-        		xRadioState.setRadioState(RadioState.OFF);
-        		break;
-        	}
-    		xState.setState(XMacStateTypes.SENDING_MSG, xConf.stepsDelayTx(PacketType.RTS));
-            xRadioState.setRadioState(RadioState.SENDING);
-            //SingletonTestResult.getInstance().countCS();
-            break;
+            /* O único evento que importa no estado CS_START é TIME_OUT.
+             * Neste caso, passa a enviar RTS, se o canal estiver livre.
+             * Em qualquer outro caso, faz um Back Off para tentar comunicação mais tarde  */
+    		
+    		switch (event){
+    		
+    		case TIME_OUT:
+    			if (xState.isChannelBusy()) {
+    				/* Se o canal de comunicação está ocupado e não recebeu um evento RTS_RECEIVED 
+        		     * deve fazer um BackOff de um tempo igual à duração do envio de DATA.            */
+    				changeState = setNewState(XMacStateType.BO_START, xConf.getStepsBOstart(), XMacActionType.TURN_OFF);
+    				if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_START, Event = TIME_OUT, Channel busy " );
+    			}
+    			else {
+    				// Se o canal está livre, envia RTS
+    				changeState = setNewState(XMacStateType.SENDING_RTS, xConf.stepsDelayTx(PacketType.RTS), XMacActionType.START_RTS);
+    				if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_START, Event = TIME_OUT, Channel free" );
+    			}
+    		break;
+    		
+    		case CHANNEL_BUSY:
+    		case CHANNEL_FREE:
+    			/* Não deve desistir se receber um evento CHANNEL_BUSY, porque pode estar recebendo um RTS.
+    			 * Se for CHANNEL_FREE, ainda pode receber um RTS. Espere o final do CS_START                                            			 */
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_START, Evento = " + event );
+    		break;
+    	    
+    		case RTS_RECEIVED:
+    		/* Se recebeu uma mensagem RTS durante o CS_START, 
+    		 * responda como se fosse um CS e tente iniciar envio mais tarde  */
+    			changeState = changeStateRTSreceived(XMacStateType.CS_START);
+       		break;
+    			
+    		default:
+    			/* Se receber qualquer outro tipo de mensagem, vá dormir      */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_START, Evento = " + event + " não previsto" );
+    		break;
+    	}
+        break;
+        
+        /** ---------- Estado Carrier Sense End - Verifica atividade no canal após comunicação  -------- **/
+        
+    	case CS_END:
+    		/* Escuta canal depois de uma transmissão. Se não recebe nada, volta a dormir depois do tempo de CS 
+    		   Diferente de CS e CS_START, neste estado, o nó sensor pode receber uma msg DATA */
+    		switch (event){
+    		
+    		case TIME_OUT:
+    			/* Se não recebeu uma mensagem completa (pela Lower SAP), pode ser um DATA. Verifique o rádio */
+    			xState.setAction(XMacActionType.ASK_CHANNEL);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = TIME_OUT, verifique o canal " );
+    		break;
+    			
+    		case CHANNEL_FREE:
+    			/* Nenhuma mensagem adicional foi enviada para este nó. Vá dormir   */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = CHANNEL_FREE" );
+    		break;
+    		
+    		case CHANNEL_BUSY:
+    			/* Se o canal de comunicação está ocupado então pode ser DATA sendo transmitido.
+        		 * Deve continuar na escuta por um tempo adicional igual ao necessário para receber DATA. */
+    			changeState = setNewState(XMacStateType.WAITING_DATA, xConf.stepsDelayRx(PacketType.DATA), XMacActionType.TURN_ON);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = CHANNEL_BUSY" );
+    		break;
+    		
+    		case RTS_RECEIVED:
+    			/* Se recebeu uma mensagem RTS durante o CS_END, 
+        		 * responda como se fosse um CS e tente iniciar envio mais tarde  */
+    			changeState = changeStateRTSreceived(XMacStateType.CS_END);
+    		break;
+    		
+    		case DATA_RECEIVED:
+       			/* Se recebeu um DATA, então já estará no estado WAITING_DATA */	
+    		break;
+ 
+    		default:
+    			/* Se recebeu um CTS ou ACK, então vá dormir.  */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = " + event);
+				break;
+            }
+    	break;
             
-    	case SENDING_MSG:  
-    		/* MAC está esperando o rádio terminar de enviar uma mensagem, a PHY sinalizará o término 
-    		  do envio. Se chegou aqui, é porque o rádio não enviou o pacote. Se o rádio enviasse, ia 
-    		  para proceedCrossLayerEvent(), depois para proceedRadioSent().
-    		  Vai para CS e depois para SLEEP, ao acordar verifica se ainda deve mandar a msg novamente
-    		 */
-            xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-            xRadioState.setRadioState(RadioState.LISTENING);
-            break;
+    	/** -------------- Estado Enviando RTS - Espera o rádio terminar de enviar RTS  ----------- **/
+    	
+        case SENDING_RTS:          
+         	/* MAC está esperando o rádio terminar de enviar uma mensagem RTS.   */       	
+    		switch (event){
+    		
+    		case TIME_OUT:
+    			/* Se o rádio não enviou RTS, vá dormir. Quando acordar iniciará o processo novamente */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_RTS, Event = TIME_OUT" );
+    		break;
+    			
+    		case MSG_SENT:
+    			/* Se o rádio enviou RTS, então espere por uma resposta CTS */
+    			changeState = setNewState(XMacStateType.WAITING_CTS, xConf.stepsDelayRx(PacketType.CTS), XMacActionType.TURN_ON);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_RTS to " 
+    					    		+ xState.getRtsPkt().getReceiver() + ". Event = MSG_SENT. PRE = " 
+    					    		+ xState.getRtsPkt().getRetryCount() + "/"+ xConf.getMaxPreambles() );
+   			break;
+        	
+        	default:
+        		if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_RTS, evento não previsto" );
+        	break;
+    		}	
+        break;
+        
+        /** -------------- Estado Enviando CTS - Espera o rádio terminar de enviar CTS  ----------- **/
+        
+        case SENDING_CTS: 
+        	/* MAC está esperando o rádio terminar de enviar uma mensagem CTS.   */ 
+        	switch (event){
+    		
+    		case TIME_OUT:
+    			/* Se o rádio não enviou CTS, vá dormir. A comunicação falhou */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_CTS, Event = TIME_OUT" );
+    		break;
+    			
+    		case MSG_SENT:
+    			/* Se o rádio enviou CTS, então espere para receber DATA */
+    			changeState = setNewState(XMacStateType.WAITING_DATA, xConf.stepsDelayRx(PacketType.DATA), XMacActionType.TURN_ON);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_CTS, Event = MSG_SENT" );
+   			break;
+        	
+        	default:
+        		if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_CTS, evento não previsto" );
+        	break;
+    		}
+   		break;
+        
+   		/** -------------- Estado Enviando DATA - Espera o rádio terminar de enviar DATA  ----------- **/
+   		
+        case SENDING_DATA: 
+        	/* MAC está esperando o rádio terminar de enviar uma mensagem DATA.   */ 
+        	switch (event){
+    		
+    		case TIME_OUT:
+    			/* Se o rádio não enviou DATA, vá dormir. Quando acordar iniciará o processo novamente */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_DATA, Event = TIME_OUT" );
+    		break;
+    			
+    		case MSG_SENT:
+    			/* Se o rádio enviou DATA, então espere por uma resposta ACK, se necessáio */
+    			if (xState.getDataPkt().isAckRequested()){
+    				changeState = setNewState(XMacStateType.WAITING_ACK, xConf.stepsDelayRx(PacketType.ACK), XMacActionType.TURN_ON);
+    			}
+    			else {
+    				xState.setDataPending(false);
+    				changeState = setNewState(XMacStateType.CS_END, xConf.getStepsCS(), XMacActionType.TURN_ON);
+    			}
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_DATA, Event = MSG_SENT" 
+    					            + " next State = " + xState.getState());
+    		break;
+        	
+        	default:
+        		if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_DATA, evento não previsto" );
+        	break;
+    		}
+   		break;
             
+   		/** -------------- Estado Enviando ACK - Espera o rádio terminar de enviar ACK  ----------- **/
+   		
+        case SENDING_ACK: 
+        	/* MAC está esperando o rádio terminar de enviar uma mensagem ACK.   */ 
+        	switch (event){
+    		
+    		case TIME_OUT:
+    			/* Se o rádio não enviou ACK, vá dormir. A comunicação falhou */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_ACK, Event = TIME_OUT" );
+    		break;
+    			
+    		case MSG_SENT:
+    			/* Se o rádio enviou ACK, então mande DATA para a Log Link Layer e vá dormir */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.MSG_UP);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_ACK, Event = MSG_SENT" );
+   			break;
+        	
+        	default:
+        		if(debug) System.out.println("Machine: " + address.getId()+ " State = SENDING_ACK, evento não previsto" );
+        	break;
+    		}
+        break;  
+  
+        /** -------------- Estado Esperando CTS - Espera o rádio receber um CTS  ---------------- **/
+        
     	case WAITING_CTS: 
-        	// Decrementa o número da sequência de RTS e obtém o novo valor da sequência
-    		int rtsSeqNum = xState.getRtsPkt().decSeqNum();
-        	/* Esperava um CTS depois de enviar um RTS, mas CTS não chegou. Ainda não terminou a
-        	 sequência de RTS. Sinaliza o envio do próximo RTS */
-            if (rtsSeqNum > 0) {
-            	// Vai avisar a XMAC que tem um pacote RTS a ser enviado em seguida
-                xState.setSendingPktType(PacketType.RTS);
-                xState.setState(XMacStateTypes.SENDING_MSG, xConf.stepsDelayTx(PacketType.RTS));
-                xRadioState.setRadioState(RadioState.SENDING);
-                break;
-            } 
-            
-            // Fim da sequência de RTS, não é mensagem BroadCast e nó de destino não respondeu
-            if (xState.getRtsPkt().getReceiver() != NodeId.ALLNODES) {
-                // Irá para CS e depois para SLEEP.
-                xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-                xRadioState.setRadioState(RadioState.LISTENING);
-            } else {
-	            /* Fim da sequência de RTS, mensagem BroadCast, todos os vizinhos estão acordados.
-	             * Logo pode enviar a mensagem. */
-	            xState.setSendingPktType(PacketType.DATA);
-	            xState.setState(XMacStateTypes.SENDING_MSG, xConf.stepsDelayTx(PacketType.DATA));
-	            xRadioState.setRadioState(RadioState.SENDING);
-            }
+         	/* MAC está esperando receber uma mensagem CTS pelo rádio. */
+    		switch (event){
+    		
+    		case TIME_OUT:
+    			/* Decrementa o número da sequência de RTS e obtém o novo valor da sequência  */
+    			int rtsSeqNum = xState.getRtsPkt().decRetryCount();
+    			/* Esperava um CTS depois de enviar um RTS, mas CTS não chegou. 
+    			 * Ainda não terminou a sequência de RTS. Sinaliza o envio do próximo RTS */
+    			if (rtsSeqNum > 0) {
+    				/* Vai avisar a XMAC que tem um pacote RTS a ser enviado em seguida  */
+    				changeState = setNewState(XMacStateType.SENDING_RTS, xConf.stepsDelayTx(PacketType.RTS), XMacActionType.MSG_DOWN);
+    				if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_CTS, Event = TIME_OUT" );
+    			} 
+    			else {
+    				/* Enviou o último RTS, rtsSeqNum = 0.
+    				 * Fim da sequência de RTS, não é mensagem BroadCast e nó de destino não respondeu  */
+    				if (xState.getRtsPkt().getReceiver() != NodeId.ALLNODES) {
+    					/* Irá para CS e depois para SLEEP.   */
+    					changeState = setNewState(XMacStateType.CS, xConf.getStepsCS(), XMacActionType.TURN_ON);
+    					if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_CTS - Fim de RTS, sem resposta <--------------" );
+    				} else {
+    					/* Fim da sequência de RTS, mensagem BroadCast, todos os vizinhos estão acordados.
+    					 * Logo pode enviar a mensagem.                                                    */
+    					changeState = setNewState(XMacStateType.SENDING_DATA, xConf.stepsDelayTx(PacketType.DATA), XMacActionType.MSG_DOWN);
+    					if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_CTS - Mensagem Broadcast - envia DATA ");
+    				}
+    			}
+    		break;
+    			
+    		case CTS_RECEIVED:
+    			/* O número do preâmbulo é copiado na mensagem de CTS pelo vizinho que responde.  */
+                if (xState.getRecPkt().getRetryCount() == xState.getRtsPkt().getRetryCount()) { 
+                	/* Avisa XMAC que tem um pacote DATA a ser enviado em seguida   */
+    				changeState = setNewState(XMacStateType.SENDING_DATA, xConf.stepsDelayTx(PacketType.DATA), XMacActionType.MSG_DOWN);
+    				if(debug) System.out.println("Machine: " + address.getId() + " State = WAITING_CTS, Event = CTS_RECEIVED " );
+                } 
+                else{
+                	changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+                	if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_CTS, Event = CTS_RECEIVED, sequencia errada = "
+        					                 + xState.getRecPkt().getRetryCount() + " ** ");
+                } 
             break;
+                
+            default:
+            	if(debug) System.out.println("Machine: " + address.getId() + " State = WAITING_CTS, evento não previsto = " + event);
+            break;
+    		}
+    		
+        break;
             
+        /** -------------- Estado Esperando DATA - Espera o rádio receber um DATA  ---------------- **/
+        
         case WAITING_DATA: 
-        	/* Acabou o tempo e não recebeu o pacote de dados, então o próximo estado será CS, 
-        	 * pois talvez outro nó queira transmitir uma mensagem*/
-            xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-            xRadioState.setRadioState(RadioState.LISTENING);
+         	/* MAC está esperando receber uma mensagem DATA pelo rádio.   */ 
+    		switch (event){
+    		
+    		case TIME_OUT:
+    			/* Acabou o tempo e não recebeu o pacote de dados, então o próximo estado será CS, 
+    			 * pois talvez outro nó queira transmitir uma mensagem                             */
+     			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+     			if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_DATA, Event = TIME_OUT" );
+    		break;
+    			
+    		case DATA_RECEIVED:
+    			/* Envie ACK se foi requisitado.
+    			 * Ou envie DATA para a Log Link Layer e vá pra o CS_END  */
+    			if (xState.getRecPkt().isAckRequested()){
+    				changeState = setNewState(XMacStateType.SENDING_ACK, xConf.stepsDelayTx(PacketType.ACK), XMacActionType.MSG_DOWN);
+    			}
+    			else {
+    				changeState = setNewState(XMacStateType.CS_END, xConf.getStepsCS(), XMacActionType.MSG_UP);
+    			}
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_DATA, Event = DATA_RECEIVED" );
+    		break;
+    			
+    		default:
+    			if(debug) System.out.println("Machine: " + address.getId() + " State = WAITING_DATA, evento não previsto = " + event);
             break;
-    	
+		}
+    		
+        break;
+    		
+        /** -------------- Estado Esperando ACK - Espera o rádio receber um ACK  ---------------- **/
+        
         case WAITING_ACK: 
-        	/* Esperava um ACK depois de enviar DATA, mas ACK não chegou. Vai para CS e depois 
-        	 para sleep, ao acordar verifica se ainda deve mandar a mensagem novamente */
-            xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-            xRadioState.setRadioState(RadioState.LISTENING);  
+        	/* Esperava um ACK depois de enviar DATA       */
+        	switch (event){
+    		
+    		case TIME_OUT:
+    			/* Acabou o tempo e não recebeu ACK. A comunicação falhou              */
+    			changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_ACK, Event = TIME_OUT" );
+    		break;
+    			
+    		case ACK_RECEIVED:
+    			/* Recebeu ACK. Sucesso na comunicação. Verifique se outro nó quer enviar mensagem     */
+    			xState.setDataPending(false);
+   				changeState = setNewState(XMacStateType.CS_END, xConf.getStepsCS(), XMacActionType.TURN_ON);
+   				if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_ACK, Event = ACK_RECEIVED" );
             break;
+                
+            default:
+            	if(debug) System.out.println("Machine: " + address.getId() + " State = WAITING_ACK, evento não previsto = " + event);
+            break;
+   		}
+   		break;
+
+   		/** --- Estado Back Off de Início - Back Off para iniciar envio de RTS quando canal está ocupado --- **/
+        
+        case BO_START:
+        	/* Back Off porque o rádio estava ocupado ao tentar iniciar processo de comunicação. */
+        	switch (event){
+    		
+    		case TIME_OUT:
+    			if (xState.decRetryCSstart() == 0){
+    				/* tentou iniciar envio de RTS várias vezes, mas o canal está ocupado. Reiniciará o processo quando acordar. */
+    				changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+    			}
+    			else {
+    				/* tentou iniciar envio de RTS, mas o canal está ocupado. Tentará mais uma vez  */
+    				changeState = setNewState(XMacStateType.CS_START, xConf.getStepsCS(), XMacActionType.ASK_CHANNEL);
+    			}
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = BO_START, Event = TIME_OUT, Retry = " + xState.getRetryCSstart() );
+        	break;
             
+    		default:
+    			if(debug) System.out.println("Machine: " + address.getId() + " State = BO_START, evento não previsto = " + event);
+    		break;
+		}
+		break;
+        	
+		/** ------------------ Estado não previsto ------------------- **/
+		
         default:
-        	debug.printw("AVISO! Estado desconhecido"+xState.getState(), address);
-    		break;
-    	}
+        	if(debug) System.out.println("Machine: " + address.getId() + " Estado não previsto. State = " + xState.getState());
+    	break;
     	
-    	// Debug, escreve entrada no arquivo de depuração
-    	debug.writeIfNodes(debug.str("Estado Depois")+debug.strXLayer(xState, xRadioState)+
-    				debug.strWuc(wuc), address, new Integer[]{1});
-    	return true;
-    }
-    
-    
-    /** Função que muda o estado do XMac e do radio quando uma mensagem foi enviada pelo rádio. 
-     * Ao ser chamada, verifica qual o tipo de mensagem, para então mudar o estado e definir 
-     * o tempo previsto para o estado atual.
-     */
-    public void changeStateSentMsg(XMacPacket packet) {
-    	// Debug, escreve entrada no arquivo de depuração
-    	debug.write(debug.str("Estado Antes")+debug.strXLayer(xState, xRadioState)+
-				debug.strPaxPkt(packet), address);
-    	
-    	switch (packet.getType()) {
-    	case RTS:
-            xState.setState(XMacStateTypes.WAITING_CTS, xConf.getStepsCTS());
-            // Vai ouvir o canal para esperar o CTS
-            xRadioState.setRadioState(RadioState.LISTENING);
-            debug.write(debug.strPaxPkt(packet), address);
-            SingletonTestResult.getInstance().countPreamble();
-            break;
-            
-    	case CTS:
-            xState.setState(XMacStateTypes.WAITING_DATA, xConf.getStepsDATA());
-            // Vai ouvir o canal para esperar o DATA
-            xRadioState.setRadioState(RadioState.LISTENING);
-            break;
-        
-    	case DATA:
-            // Se precisará enviar ACK
-            if (xState.getDataPkt().isAckRequested()) {
-                // Tempo de espera por um ACK
-                xState.setState(XMacStateTypes.WAITING_ACK, xConf.getStepsACK());
-                // Vai esperar um ACK de DATA.
-                xRadioState.setRadioState(RadioState.LISTENING);
-              // Se não precisa enviar ACK
-            } else {
-            	// Pacote de DATA é removido, pois já enviou o DATA e não precisa enviar ACK
-                xState.setDataPkt(null);
-                xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-                xRadioState.setRadioState(RadioState.LISTENING);
-            }
-            break;
-        
-    	case ACK: 
-    		// Acabou de enviar o ACK após receber DATA
-            xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-            // Verificar se há outra mensagem.
-            xRadioState.setRadioState(RadioState.LISTENING);
-            /* Depois de enviar a mensagem ACK, envie a mensagem de DATA para a camada superior.
-             Avisa a XMac que tem um pacote DATA a ser enviado para a LOGLINK em seguida.
-             Como DATA veio da camada de baixo, a direção é do pacote é UPWARDS */
-            xState.setSendingPktType(PacketType.DATA);
-            break;
-            
-    	case NACK:
-        case CONTROL:
-        case VOID: 
-    	default:
-            xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-            xRadioState.setRadioState(RadioState.LISTENING);
-            debug.printw("Mensagem desconhecida: "+packet.getType(), address);
-    		break;
-    	}
-    	
-    	// Debug, escreve entrada no arquivo de depuração
-    	debug.write(debug.str("Estado Depois")+debug.strXLayer(xState, xRadioState)+
-				debug.strPaxPkt(packet), address);
-    }
-    
-    
-    /**
-     *  Função que processa as mensagem recebidas pelo rádio, quando o rádio acaba de receber uma 
-     *  mensagem e a PHY a repassa para a MAC.
-     *  Se a mensagem não é para este nó e ele está no estado CS_START, ele volta para CS_START pois 
-     *  o envio de RTS's deverá ser adiado. Em outros estados quando a mensagem não era para este nó,
-     *  não foi considerado.
-     */
-    public void changeStateReceivedMsg(XMacPacket packet) {
-    	
-    	
-    	
-    	// Debug, escreve entrada no arquivo de depuração
-    	debug.write(debug.str("Estado Antes")+debug.strXLayer(xState, xRadioState)+
-				debug.strPaxPkt(packet), address);
-    	
-    	// Se acabou de receber uma mensagem, então o canal de rádio agora está livre.
-    	xState.setChannelBusy(false);
-    	
-    	// Se a mensagem é destinado para outro nó
-        if ((packet.getReceiver().asInt() != address.getId().asInt()) && 
-        		(packet.getReceiver() != NodeId.ALLNODES)) {    	
-        	if ((xState.getState() == XMacStateTypes.CS_START) &&
-                    ((packet.getType() == PacketType.RTS) || (packet.getType() == PacketType.CTS))) {
-                double delay = packet.getSequenceNumber()*(xConf.getStepsRTS() + xConf.getStepsACK());
-                xState.setState(XMacStateTypes.SLEEP, delay);
-                xRadioState.setRadioState(RadioState.OFF);
-        	}
-        	// Debug, escreve entrada no arquivo de depuração
-        	debug.write(debug.str("Estado Depois")+debug.strXLayer(xState, xRadioState)+
-    				debug.strPaxPkt(packet), address);
-        	/* Nos demais casos, ignora a chegada de mensagem destinada a outro nó, e aguarda o final 
-            da WUC em curso */
-        	return; 
-        }
-    	
-    	switch (packet.getType()) {
-    	case RTS:
-    		/* Se estivesse em CS_START, vai receber a mensagem que chegou, entra em CS e vai
-    		 verificar que existe um DATA pendente para ser enviado */
-            if ((xState.getState() == XMacStateTypes.CS) || 
-            		(xState.getState() == XMacStateTypes.CS_START)) {
-                /* Se foi requisitado CTS, espera um tempo para enviar o CTS. Se for Broadcast não é 
-				 requisitado o ACK */
-                if (packet.isAckRequested()) {
-                	// Vai avisar a XMac que tem um pacote CTS a ser enviado em seguida
-                    xState.setSendingPktType(PacketType.CTS);
-                	xState.setReceiverNode(packet.getSender().getId());
-                	xState.setCtsSeqNum(packet.getSequenceNumber());
-                    xState.setState(XMacStateTypes.SENDING_MSG, xConf.stepsDelayTx(PacketType.CTS));
-                    xRadioState.setRadioState(RadioState.SENDING);
-                /* Se não foi requisitado CTS então a mensagem é de Broadcast. Mantenha-se em CS até 
-                 o último preâmbulo, depois do qual será enviado DATA */
-                } else {
-                    xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-                    xRadioState.setRadioState(RadioState.LISTENING);
-                }
-            } else {
-            	debug.printw("AVISO! RTS recebido no estado: "+xState.getState(), address);
-            }
-            break;
-            
-    	case CTS:
-            if ((xState.getState() == XMacStateTypes.WAITING_CTS)) {
-                // O número do preâmbulo é copiado na mensagem de CTS pelo vizinho que responde.
-                if (packet.getSequenceNumber() == xState.getRtsPkt().getSequenceNumber()) { 
-                    // Avisa XMAC que tem um pacote DATA a ser enviado em seguida
-                    xState.setSendingPktType(PacketType.DATA);
-                    xState.setState(XMacStateTypes.SENDING_MSG, xConf.stepsDelayTx(PacketType.DATA));
-                    xRadioState.setRadioState(RadioState.SENDING);
-                } else {
-                	System.out.println("[AVISO! MAC Nó:"+address.getId()+"] Sequência errada no CTS: "+ 
-                			packet.getSequenceNumber());
-                }
-            } else {
-            	debug.printw("AVISO! CTS recebido no estado: "+xState.getState(), address);
-            }
-            break;
-            
-    	case DATA: 
-    		/* Mensagem de dados, o que deverá ser enviado para a LogLink. DATA também é esperado 
-    		 * durante um CS depois do último preâmbulo de Broadcast */
-            if ((xState.getState() == XMacStateTypes.WAITING_DATA) || 
-            		(xState.getState() == XMacStateTypes.CS)) {
-            	// Guarde o pacote de dados recebido para enviar para a LogLink depois.
-            	xState.setDataPkt(packet);
-                // Se ACK é exigido
-                if (packet.isAckRequested()) {
-                	// Vai avisar a X_MAC que tem um pacote ACK a ser enviado em seguida
-                	xState.setSendingPktType(PacketType.ACK);
-                	xState.setState(XMacStateTypes.SENDING_MSG, xConf.stepsDelayTx(PacketType.ACK));
-                	xRadioState.setRadioState(RadioState.SENDING);
-    			    // Guardar atributos para montar pacote ACK
-                	xState.setReceiverNode(packet.getSender().getId());
-                	xState.setAckSeqNum(packet.getSequenceNumber());
-                } else {
-                	//////if (packet.getReceiver() != NodeId.ALLNODES)//////
-                    /* Avisar a XMac que tem um pacote do tipo DATA a ser enviado. Como veio da camada
-                     abaixo está a mensagem está definida como UPWARDS e será enviada para a LogLink */
-                    xState.setSendingPktType(PacketType.DATA);   
-                    // Escuta o canal por mais um tempo, para ver se haverá mais alguma transmissão
-                    xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-                    xRadioState.setRadioState(RadioState.LISTENING);
+    	} // Fim de lista de estados
 
-                    
-                }
-              /* Se foi recebido um DATA indesejado durante um CS_START, deve reiniciar o envio de RTS.
-               Se o estado atual não era CS ou CS_START, então pode ignorar a mensagem recebida */
-            } else if (xState.getState() == XMacStateTypes.CS_START) {
-                /* Desligue para não receber outra mensagem indesejada. Ao acabar o WUC e chamar 
-            	changeStateTimeOut() novamente, não vai mudar de estado, vai sair na verificação de 
-            	rádio pois vai estar OFF. Irá reiniciar o envio de RTS's chamando startSendDataProcess()
-            	da classe XMac  */
-            	xRadioState.setRadioState(RadioState.OFF);
-                // Reiniciar o envio de RTS.
-            	xState.setRestartRTS(true);
-            }
-            /*
-            AppPacket pktApp = (AppPacket)packet.getPacket(LayerType.APPLICATION);
-    		if(pktApp.getDestinationId() == address.getId().asInt()){
-    			XMac.printStatistics();
-    		}*/
-            break;
-            
-    	case ACK:
-            if (xState.getState() == XMacStateTypes.WAITING_ACK) {
-            	// Confira se o ACK corresponde ao DATA que foi enviado.
-            	if(packet.getSequenceNumber() == xState.getDataPkt().getSequenceNumber()) {
-                    // A mensagem foi enviada e confirmado o recebimento.
-                    xState.setDataPkt(null);
-                    // Acabou a transmissão de DATA, vá para CS.
-                    xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-                    xRadioState.setRadioState(RadioState.LISTENING);
-                }
-            }
-            break;
-        
-    	case NACK:
-        case CONTROL:
-        case VOID:
-        default:
-            // Volta para CS
-            xState.setState(XMacStateTypes.CS, xConf.getStepsCS());
-            xRadioState.setRadioState(RadioState.LISTENING);
-            debug.printw("Mensagem desconhecida: "+packet.getType(), address);
-            break;
-    	}
-
-    	// Debug, escreve entrada no arquivo de depuração
-    	debug.write(debug.str("Estado Depois")+debug.strXLayer(xState, xRadioState)+
-				debug.strPaxPkt(packet), address);
+    	return changeState;  
+    	
+    }  // Final da função  changeState
+    
+    
+    /** Função para decidir o que fazer quando receber um RTS.     
+     */ 
+    public boolean changeStateRTSreceived(XMacStateType oldState) {
+    	boolean changeState;
+		/* Se recebeu uma mensagem RTS durante o CS. RTS é a o único tipo de mensagem que importa aqui  */
+		if (xState.getRecPkt().getReceiver() == this.address.getId()){
+	    	// Vai avisar a XMac que tem um pacote CTS a ser enviado em seguida
+	        changeState = setNewState(XMacStateType.SENDING_CTS, xConf.stepsDelayTx(PacketType.CTS), XMacActionType.MSG_DOWN);
+	        if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED unicast" );
+		}
+	    /* Se a mensagem é de Broadcast, então não precisa responder com CTS. 
+	     * Vá para Sleep até que chegue a hora do envio de DATA.
+	     * Espera = (número de RTS que faltam) * (intervalo entre envios de RTS) */
+	    else if (xState.getRecPkt().getReceiver() == NodeId.ALLNODES){
+	    	double delay = xState.getRecPkt().getRetryCount() * (xConf.getStepsRTS() + xConf.stepsDelayRx(PacketType.CTS));
+	    	changeState = setNewState(XMacStateType.SLEEP, delay, XMacActionType.TURN_OFF);
+	    	if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED broadcast" );
+	    }
+	    else {
+	    	/* RTS não é para este nó  */
+	    	changeState = setNewState(XMacStateType.SLEEP, xConf.getStepsSleep(), XMacActionType.TURN_OFF);
+	    	if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED para outro nó" );
+	    }
+		return changeState;
     }
     
-    
-    /** Função que muda o estado do XMac e do rádio quando possui uma mensagem para enviar. 
-     * Ao ser chamada, verifica qual o tipo de mensagem, para então mudar o estado e definir 
-     * o tempo previsto para o estado atual.
-     * No XMac todo envio de DATA é precedido por RTS, portanto nesse caso existe apenas a
-     * opção RTS.
-     */
-    public void changeStateSendingMsg() {
-    	switch (xState.getSendingPktType()) {
-    	case RTS:
-    		// Quando o XMac vai iniciar o envio de RTS
-            xState.setState(XMacStateTypes.CS_START, xConf.getStepsCS());
-            xRadioState.setRadioState(RadioState.LISTENING);
-            SingletonTestResult.getInstance().countCS();
-            //nodeDebugger.countCS();
-            SingletonTestResult.getInstance().setNodeConfiguration(address.getId(), "COUNT_CS");
-            break;
-            
-    	default:
-    		break;
-    	}
-    }
-    
-    
-    /** Função que muda o estado do XMac e do radio quando o rádio está recebendo uma mensagem.
-     * XMac irá manter seu estado atual mais irá atualizar o delay para até o fim da mensagem
-     * para que possa recebê-la para depois então continuar a mudança de estados.
-     */
-    public void changeStateReceivingMsg(XMacPacket packet) {
-
-    	double delay = 1;
-    	switch (packet.getType()) {
-    	case RTS:
-    		delay += xConf.getStepsRTS();
-    		break;
-    	case CTS:
-    		delay += xConf.getStepsCTS();
-    		break;
-    	case ACK:
-    		delay += xConf.getStepsACK();
-    		break;
-    	case DATA:
-    		delay += xConf.getStepsDATA();
-    		break;
-    	default:
-    		break;
-    	}
-    	xState.setState(xState.getState(), delay);
+    /** Função que faz a primeira mudança de estado do XMac. O nó irá entrar em modo SLEEP 
+     *  por um tempo aleatório, antes de iniciar suas atividades 
+     */ 
+    public void changeStateBootNode() {
+    	// Se for necessário testar com seed fixa para cada nó
+    	// Random gerador = new Random(address.getId().asInt());
+    	// int delay = gerador.nextInt(Integer.valueOf((int) Math.round(xConf.getStepsCycle())));
+       
+    	// Tempo pequeno aleatório em steps para ligar o nó sensor
+    	double delay = (Math.random() * (xConf.getStepsCycle()));
+    	xState.setState(XMacStateType.SLEEP, delay);
     }
   	
 }

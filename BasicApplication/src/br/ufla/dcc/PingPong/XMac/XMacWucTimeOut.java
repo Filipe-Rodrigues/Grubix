@@ -5,12 +5,12 @@ import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 
 /**
- * 
- * WakeUpCall para envio de pacotes da MAC.
- * Embora seja uma WUC, foi deixado na pasta da X_MAC para não poluir o Grubix
- 
- * @author Gustavo Araujo - 19/05/2016
- *
+ *  WakeUpCall para envio de pacotes da MAC.
+ *  
+ *  Usada pela XMac.java
+ *  
+ * 	@author João Giacomin
+ *  @version 18/03/2019
  */
 
 public class XMacWucTimeOut extends WakeUpCall {

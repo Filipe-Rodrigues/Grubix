@@ -1,35 +1,30 @@
 package br.ufla.dcc.PingPong.XMac;
 
-import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 
 /**
- *  Configuração da MAC;
+ *  Configuração do X-MAC;
+ *  
+ *  Usada pela XMac.java
  *
  * 	@author João Giacomin
- *  @author Gustavo Araújo
- *  @version 04/07/2016
+ *  @version 18/03/2019
  */
 
 public class XMacConfiguration {
-
-	/** Se é para habilitar o uso de ACK */
-	private boolean ackEnable;
 	
-	private double lengthCycle;
+	/** exige o envio de ACK para confirmar recepção de DATA */
+	private boolean ackRequested;
 	
 	/** Tempo em steps em que o nó ficará em SLEEP */
 	private double stepsSleep;
 	
-	/** Tempo em steps para a escuta do canal na espera de um RTS */
+	/** Tempo em steps para a escuta do canal na espera de um RTS, Carrier Sense */
 	private double stepsCS;
 	
 	/** Tempo em steps para enviar uma mensagem de Preâmbulo (RTS) */
 	private double stepsRTS;
-	
-	/** Tempo em steps para enviar uma mensagem earlyACK (CTS) */
-	private double stepsCTS;
 	
 	/** Tempo em steps para enviar uma mensagem de ACK */
 	private double stepsACK;
@@ -37,17 +32,23 @@ public class XMacConfiguration {
 	/** Tempo em steps para enviar uma mensagem de DATA */
 	private double stepsDATA;
 	
+	/** Tempo em steps para enviar uma mensagem earlyACK (CTS) */
+	private double stepsCTS;
+
 	/** Tempo em steps a mais como margem de segurança para garantir o fim de uma transmissão */
 	private double stepsEndTx;
 	
-	/** Número máximo de preâmbulos a serem enviado na tentativa de se alcançar nó vizinho */
-	private int maxPreambles;
+	/** Tempo em steps para Back Off entre CS_STARTs */
+	private double stepsBOstart;
+	
+	/** Número máximo de tentativas iniciar envio de RTS */
+	private int maxBOstarts = XMacConstants.NUM_MAX_RETRANSMISSIONS;
 	
 	/** Máximo de tentativas de reenvio de uma mensagem  */
 	private int maxSendRetries = XMacConstants.NUM_MAX_RETRANSMISSIONS;
 	
-	/** Padrão da intensidade de sinal a ser utilizada no envio do de um pacote */
-	private double signalStrength = XMacConstants.SS_DEFAULT;
+	/** Número máximo de preâmbulos a serem enviado na tentativa de se alcançar nó vizinho */
+	private int maxPreambles;
 	
 	/** Tamanho do dado em bits */
 	private int lengthDATA = XMacConstants.DATA_LENGTH;
@@ -61,17 +62,17 @@ public class XMacConfiguration {
 	/** Tamanho do CTS em bist */
 	private int lengthCTS = XMacConstants.CTS_LENGTH;
 	
-	/** Valor máximo de uma sequência, para identificador de mensagem ou para preâmbulos. Deve ser sempre 2^N-1 */
-	private int maxSequence = XMacConstants.MAX_SEQUENCE;
+	/** Padrão da intensidade de sinal a ser utilizada no envio do de um pacote */
+	private double signalStrength = XMacConstants.SS_DEFAULT;
+	
 	
 	/** Construtor */
-	public XMacConfiguration(double lengthCycle, boolean ackEnable) {
-		double stepsPerSecond = Configuration.getInstance().getStepsPerSecond();
+	public XMacConfiguration(double lengthCycle, boolean ack) {
 		
-		this.ackEnable = ackEnable;
-		this.lengthCycle = lengthCycle;
+		// Se é para utilizar ACK
+		this.ackRequested = ack;
 		
-		/* Os steps são a granularidade da simulação definida em "stepspersecond" em  applicatio.xml
+		/* Os steps são a granularidade da simulação definida em "stepspersecond" em  application.xml
 		stepsPBit define o número de steps necessários para enviar 1 bit */
 		double stepsPBit = (double)Configuration.getInstance().getStepsPerSecond()/XMacConstants.BPS;
 		
@@ -81,46 +82,42 @@ public class XMacConfiguration {
 		stepsACK = stepsPBit * lengthACK;
 		stepsDATA= stepsPBit * lengthDATA;
 		
-		/* Tempo em steps para escutar o canal em busca de preâmbulos. Como no simulador camada física 
-		 * manda o preâmbulo de uma única vez, não tem como acordar no meio de um preâmbulo como num rádio 
-		 * real. Por isso é necessário esperar um tempo de RTS completo mais um tempo de CTS e mais um pouco 
-		 * (usado outro tempo de RTS)
-		 */
-		stepsSleep = 5;
-		
-		// Tempo em steps em que o nó ficará em SLEEP (steps do ciclo - steps escuta ociosa)
-		stepsCS = (lengthCycle * Configuration.getInstance().getStepsPerSecond()) - stepsSleep;
-
 		// Tempo de margem de segurança adicional para garantir que a transmissão finalizou
 		stepsEndTx = stepsACK/2;
 		
-		/* O máximo de preâmbulos necessário para até o nó acordar (stepsSleep/(stepsRTS + stepsCTS)
-		 * É acrescentado um porque a divisão pode não ser exata 1,1 = 2 preâmbulos. Também é acrescentado
-		 * outro preâmbulo (analisar para ver motivo)
+
+		/* Tempo em steps para escutar o canal em busca de preâmbulos. 
+         * Para garantir que pelo menos 1 preâmbulo será ouvido por inteiro,
+         * é preciso escutar pelo tempo de 1 preâmbulo + 1 wait_CTS + 1 preâmbulo
+         * wait_CTS = stepsDelayRx(PacketType.CTS) = stepsCTS + 2*stepsEndTx.
+         * Estava ocorrendo muita perda de preâmbulo, por tempo menor que 1 step,
+         * por isso foi colocado +1 no stepsCS.
 		 */
-		maxPreambles = 1;
-		SingletonTestResult.getInstance().loadInformation(stepsDATA, stepsACK, stepsCTS, stepsRTS, stepsCS);
+		stepsCS = 2*stepsRTS + stepsDelayRx(PacketType.CTS) + 1;
+		
+		/* Tempo de Back Off entre CS_STARTs */
+		stepsBOstart = stepsDATA;
+		
+		double stepsCycle = lengthCycle * Configuration.getInstance().getStepsPerSecond();
+		
+		// Tempo em steps em que o nó ficará em SLEEP (steps do ciclo - steps Carrier Sense)
+		stepsSleep = stepsCycle - stepsCS;
+		
+		/* Máximo de preâmbulos necessários para cobrir um tempo de ciclo (stepsSleep/(stepsRTS + stepsWaitCTS))
+		 * O intervalo entre um preâmbulo e outro é o tempo de envio de 1 preâmbulo mais o tempo de espera por eACK.
+		 * É acrescentado um porque a divisão pode não ser exata 12,4 = 13 preâmbulos. 
+		 */
+		maxPreambles = (int) (stepsCycle / (stepsRTS + stepsDelayRx(PacketType.CTS))) + 1 ;
 	}
 
-	/** Normaliza a quantidade de tempo em steps em que o nó ficará em SLEEP*/
-	public void normalizeStepsSleep() {
-		double stepsPerSecond = Configuration.getInstance().getStepsPerSecond();
-		stepsCS = 2*stepsRTS + stepsCTS;
-		stepsSleep = (lengthCycle * stepsPerSecond) - stepsCS;
-		SingletonTestResult.getInstance().loadInformation(stepsDATA, stepsACK, stepsCTS, stepsRTS, stepsCS);
-	}
 	
-	public void normalizeMaxPreambles(boolean isBackbone) {
-		double stepsPerSecond = Configuration.getInstance().getStepsPerSecond();
-		maxPreambles = (int) ((lengthCycle*stepsPerSecond*((isBackbone) ? (10) : (1)) - stepsRTS) / (stepsRTS + stepsCTS) + 1);
-	}
+	/* Gets e sets */
 	
 	/** Tempo em steps do ciclo de trabalho*/
 	public double getStepsCycle() {
 		return stepsSleep + stepsCS;
 	}
 	
-	/** Gets e sets */
 	public double getStepsSleep() {
 		return stepsSleep;
 	}
@@ -140,6 +137,22 @@ public class XMacConfiguration {
 	public double getStepsDATA() {
 		return stepsDATA;
 	}
+	
+	public double getStepsACK() {
+		return stepsACK;
+	}
+
+	public double getStepsEndTx() {
+		return stepsEndTx;
+	}
+	
+	public double getStepsBOstart() {
+		return stepsBOstart;
+	}
+
+	public int getMaxBOstarts() {
+		return maxBOstarts;
+	}
 
 	public int getMaxPreambles() {
 		return maxPreambles;
@@ -152,13 +165,9 @@ public class XMacConfiguration {
 	public double getSignalStrength() {
 		return signalStrength;
 	}
-	
+
 	public void setSignalStrength(double signalStrength) {
 		this.signalStrength = signalStrength;
-	}
-
-	public int getLengthDATA() {
-		return lengthDATA;
 	}
 
 	public int getLengthRTS() {
@@ -169,31 +178,24 @@ public class XMacConfiguration {
 		return lengthCTS;
 	}
 
-	public double getStepsACK() {
-		return stepsACK;
+	public int getLengthDATA() {
+		return lengthDATA;
 	}
 
 	public int getLengthACK() {
 		return lengthACK;
 	}
 
-	public boolean isAckEnable() {
-		return ackEnable;
+	public boolean isACKrequested() {
+		return ackRequested;
 	}
 
-	public void setAckEnable(boolean ackEnable) {
-		this.ackEnable = ackEnable;
+	public void setACKrequested(boolean ack) {
+		this.ackRequested = ack;
 	}
 
-	public int getMaxSequence() {
-		return maxSequence;
-	}
-
-	public double getStepsEndTx() {
-		return stepsEndTx;
-	}
-
-	/** Obtém steps baseado no tipo de pacote */
+	/** Informa tempo (em steps) para esperar o rádio transmitir um pacote. 
+	 *  É a soma de um intervalo de transmissão do pacote com um possível pequeno atraso do rádio */
 	public double stepsDelayTx(PacketType pkType) {
 		switch (pkType) {
 		case RTS:
@@ -209,14 +211,39 @@ public class XMacConfiguration {
 		}
 	}
 	
-	public void adjustLengthCycle(boolean backboned) {
-		if (backboned) {
-			lengthCycle = 0.01d;
-		} else {
-			lengthCycle = 0.1d;
+	/** Informa tempo de espera (em steps) para receber um pacote 
+	 *  É a soma de um intervalo stepsDelayTx com um possível pequeno atraso do rádio*/
+	public double stepsDelayRx(PacketType pkType) {
+		switch (pkType) {
+		case RTS:
+			return getStepsRTS()+2*getStepsEndTx();
+		case ACK:
+			return getStepsACK()+2*getStepsEndTx();
+		case CTS:
+			return getStepsCTS()+2*getStepsEndTx();
+		case DATA:
+			return getStepsDATA()+2*getStepsEndTx();
+		default:
+			return 0;
 		}
 	}
-	
-	/** Obtém steps baseado no tipo de pacote */
-	
+
+	/** Imprime parâmetros da MAC */
+	public void imprimeParametros ( ) {
+		System.out.println("* \n*   X-MAC \n*");
+		System.out.println("* Steps de ciclo =  "+ (stepsSleep+stepsCS) );
+		System.out.println("* Steps de sleep =  "+ stepsSleep);
+		System.out.println("* Steps de CS =     "+ stepsCS );
+		System.out.println("* Steps de RTS =    "+ stepsRTS );
+		System.out.println("* Steps de CTS =    "+ stepsCTS );
+		System.out.println("* Steps de ACK =    "+ stepsACK );
+		System.out.println("* Steps de DATA =   "+ stepsDATA );
+		System.out.println("* Steps de Etx =    "+ stepsEndTx );
+		System.out.println("* Max Preambles =   "+ maxPreambles );
+		System.out.println("* Max sendRetries = "+ maxSendRetries );
+		System.out.println("* Max retyCSstart = "+ maxBOstarts );
+		System.out.println("* \n  " );
+		
+	}
+
 }

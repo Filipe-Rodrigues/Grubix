@@ -39,7 +39,7 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
 /** 
  * Manager to create random movement of the nodes.
  * Every node is moved a random distance between 0 and maxRange.
- * The direction is determined randomly between 0 and 360 degrees.
+ * The direction is determined randomly between [0, 360) degrees.
  * 
  * 
  * @author Andreas Kumlehn
