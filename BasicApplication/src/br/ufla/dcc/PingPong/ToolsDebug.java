@@ -39,9 +39,7 @@ import br.ufla.dcc.PingPong.Phy.WucPhyRxTimer;
 import br.ufla.dcc.PingPong.XMac.XMacConfiguration;
 import br.ufla.dcc.PingPong.XMac.XMacConstants;
 import br.ufla.dcc.PingPong.XMac.XMacPacket;
-import br.ufla.dcc.PingPong.XMac.XMacRadioState;
 import br.ufla.dcc.PingPong.XMac.XMacState;
-import br.ufla.dcc.PingPong.XMac.XMacWucBackOff;
 import br.ufla.dcc.PingPong.XMac.XMacWucTimeOut;
 import br.ufla.dcc.PingPong.node.AppPacket;
 import br.ufla.dcc.grubix.simulator.node.Node;
@@ -557,16 +555,13 @@ public class ToolsDebug {
 	}
 	
 	/** Define o formato das informações do WakeUpCall do tipo WucBackOff (XMac)*/
-	public String strWucBackOff(XMacWucBackOff wuc) {
-		return strWuc(wuc)+tagField("WucBackOff")+
-				" StartingTime="+wuc.getStartingTime()+'\n'+
-				strPkt(wuc.getPacket());
+	public String strWucBackOff() {
+		return "";
 	}
 	
 	/** Define o formato das informações do pacote da camada de mac */
 	public String strXPkt(XMacPacket p) {
-		return strPkt(p)+tagField("PacketXmac")+
-				" SequenceNumber="+p.getSequenceNumber()+'\n';
+		return strPkt(p)+tagField("PacketXmac")+'\n';
 	}
 	
 	
@@ -591,11 +586,6 @@ public class ToolsDebug {
 		s = tagField("XmacState")+" state="+x.getState()+
 				" SeqNum="+x.getStateSeqNum()+
 				" Duration="+x.getStateDuration()+
-				" RestartRTS="+x.isRestartRTS()+
-				" SendingPktType="+x.getSendingPktType()+
-				" AckSeqNum="+x.getAckSeqNum()+
-				" CtsSeqNum="+x.getCtsSeqNum()+
-				" DataSeqNum="+x.getDataSeqNum()+
 				" ReceiverNode="+x.getReceiverNode();
 		if (x.getDataPkt() != null)	
 			s += strPkt(x.getDataPkt());
@@ -605,20 +595,6 @@ public class ToolsDebug {
 			s+='\n';
 		return s;
 	}
-	
-	
-	/** Define o formato das informações referentes ao rádio mantido pela XMac */
-	public String strXRadioState(XMacRadioState x) {
-		return tagField("XRadioState")+" state="+x.getRadioState()+'\n';
-	}
-	
-	
-	/** Define o formato das informações referentes ao rádio mantido pela XMac */
-	public String strXLayer(XMacState xState, XMacRadioState xRadio) {
-		return strXState(xState)+strXRadioState(xRadio);		
-	}
-	
-	
 	
 	/*
 	 * -------------------------------------------------------------------------------

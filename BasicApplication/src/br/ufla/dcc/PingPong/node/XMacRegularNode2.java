@@ -3,9 +3,6 @@ package br.ufla.dcc.PingPong.node;
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
 import br.ufla.dcc.PingPong.ToolsStatisticsSimulation;
-import br.ufla.dcc.PingPong.node.AppPacket;
-import br.ufla.dcc.grubix.simulator.node.ApplicationLayer;
-import br.ufla.dcc.grubix.simulator.Address;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.Finalize;
 import br.ufla.dcc.grubix.simulator.event.Packet;
@@ -13,6 +10,7 @@ import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.TrafficGeneration;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
+import br.ufla.dcc.grubix.simulator.node.ApplicationLayer;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
 
@@ -61,7 +59,7 @@ public class XMacRegularNode2 extends ApplicationLayer {
 		
 		
 		
-		if (node.getId().asInt() == 1 || node.getId().asInt() == 3) {			
+		if (node.getId().asInt() == 1) {			
 			// Cria um evento wakeUpCall para si mesma para acordar após 1000 steps
 			//System.out.println("currentregularnode - node=1");
 				PingPongWakeUpCall wakeUpCall = new PingPongWakeUpCall(sender, 2000);

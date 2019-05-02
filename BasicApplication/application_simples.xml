@@ -2,7 +2,7 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="configuration.xsd">
 <description write="BasicApplication"/>
 <field>
-    <dimension x="500" y="500"/>
+    <dimension x="200" y="200"/>
 </field>
 <physicalmodel>
     <class>br.ufla.dcc.grubix.simulator.physical.UnitDisc</class>
@@ -18,39 +18,34 @@
     <class>br.ufla.dcc.grubix.simulator.physical.CollisionPacketMangler</class>
 </bitmanglingmodel>
 <nodes>
-    <node name="REGULAR" count="2000">
+    <node name="REGULAR" count="250">
         <layers>
         	<application>
-                <class>br.ufla.dcc.PingPong.node.BackboneRegularNode</class>
-                <params>
-                	<param name="appStartingCycle">2000</param>
-                </params>
+                <class>br.ufla.dcc.PingPong.node.XMacRegularNode2</class>
+                
             </application>
             <operatingSystem>
                 <class>br.ufla.dcc.grubix.simulator.node.user.os.NullOperatingSystemLayer</class>
             </operatingSystem>
             <network>
                 <class>br.ufla.dcc.PingPong.routing.GeoRouting</class>
-                <!--<class>br.ufla.dcc.grubix.simulator.node.user.OptimalSourceRouting</class>-->
             </network>
             <logLink>
                 <class>br.ufla.dcc.PingPong.Llc.LogLinkControl</class>
             </logLink>
             <mac>
                 <class>br.ufla.dcc.PingPong.XMac.XMac</class>
-                <!--<class>br.ufla.dcc.grubix.simulator.node.user.MAC_IEEE802_11bg_DCF</class>-->
                 <params>
                     <param name="cycleTime">0.1</param>
-                    <param name="ackEnable">false</param>
-                    <param name="backboneFormingTime">1000</param>
+                    <param name="ackRequested">false</param>
+                    <!--<param name="backboneFormingTime">1000</param>-->
                 </params>
             </mac>
             <energyManager>
                 <class>br.ufla.dcc.grubix.simulator.node.energy.BasicEnergyManager</class>
             </energyManager>
             <physical>
-                <class>br.ufla.dcc.PingPong.Phy.PhysicalSimple</class>
-                <!--<class>br.ufla.dcc.grubix.simulator.node.user.PHY_802_11bg</class>-->
+                <class>br.ufla.dcc.PingPong.physicalX.PhysicalX</class>
                 <params>
                 </params>
             </physical>      
@@ -99,5 +94,5 @@
     </generated>
 </positions>
 <!--Tempo total de simulação = stepspersecond * seconds-->
-<simulationtime stepspersecond="10000" base="seconds">2</simulationtime>
+<simulationtime stepspersecond="10000" base="seconds">5</simulationtime>
 </configuration>

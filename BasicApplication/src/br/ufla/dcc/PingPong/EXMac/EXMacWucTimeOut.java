@@ -1,19 +1,19 @@
-package br.ufla.dcc.PingPong.XMac;
+package br.ufla.dcc.PingPong.EXMac;
 
 import br.ufla.dcc.grubix.simulator.Address;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 
 /**
- * 
- * WakeUpCall para envio de pacotes da MAC.
- * Embora seja uma WUC, foi deixado na pasta da X_MAC para não poluir o Grubix
- 
- * @author Gustavo Araujo - 19/05/2016
- *
+ *  WakeUpCall para envio de pacotes da MAC.
+ *  
+ *  Usada pela XMac.java
+ *  
+ * 	@author João Giacomin
+ *  @version 18/03/2019
  */
 
-public class XMacWucTimeOut extends WakeUpCall {
+public class EXMacWucTimeOut extends WakeUpCall {
 	
 	/** Número sequencial do estado */
 	private int seqState;
@@ -28,7 +28,7 @@ public class XMacWucTimeOut extends WakeUpCall {
 	 * @param sender Sender of the WakeUpCall.
 	 * @param delay Wanted delay until callback.
 	 */
-	public XMacWucTimeOut(Address sender, Double delay) {
+	public EXMacWucTimeOut(Address sender, Double delay) {
 		super(sender, delay);
 		startTime = SimulationManager.getInstance().getCurrentTime();
 	}
@@ -37,7 +37,7 @@ public class XMacWucTimeOut extends WakeUpCall {
 	 * Default constructor of the class X_MACStateTimerWUC with no packet.
 	 * 
 	 */
-	public XMacWucTimeOut(Address sender, Double delay, int sequencial) {
+	public EXMacWucTimeOut(Address sender, Double delay, int sequencial) {
 		super(sender, delay);
 		startTime = SimulationManager.getInstance().getCurrentTime();
 		seqState  = sequencial;
