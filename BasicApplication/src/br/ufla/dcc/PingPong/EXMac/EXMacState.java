@@ -45,7 +45,7 @@ public class EXMacState extends LayerState {
 	private double stateDuration;
 	
 	/** Próxima ação a ser executada pela XMac.java  */
-	private XMacActionType action;  
+	private EXMacActionType action;  
 	
 	/** Pacote de dados que será enviado */
 	private EXMacPacket dataPkt;
@@ -174,11 +174,11 @@ public class EXMacState extends LayerState {
 		this.recPkt = recPkt;
 	}
 
-	public XMacActionType getAction() {
+	public EXMacActionType getAction() {
 		return action;
 	}
 
-	public void setAction(XMacActionType action) {
+	public void setAction(EXMacActionType action) {
 		this.action = action;
 	}
 
@@ -248,7 +248,7 @@ public class EXMacState extends LayerState {
 	 * 
 	 * Usado pela XMacStateMachine.java para indicar ações para a XMac.java
 	 */
-	public enum XMacActionType {
+	public enum EXMacActionType {
 		
 		/** Não há nada a fazer */
 		CONTINUE,
@@ -278,7 +278,7 @@ public class EXMacState extends LayerState {
 	 * Cada evento recebido pela XMac.java levará a um chamado à XMacStateMachine.java 
 	 * para indicar o próximo estado.
 	 */
-	public enum XMacEventType {
+	public enum EXMacEventType {
 		
 		/** Time Out */
 		TIME_OUT,

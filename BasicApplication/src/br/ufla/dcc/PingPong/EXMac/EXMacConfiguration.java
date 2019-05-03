@@ -65,6 +65,14 @@ public class EXMacConfiguration {
 	/** Padrão da intensidade de sinal a ser utilizada no envio do de um pacote */
 	private double signalStrength = EXMacConstants.SS_DEFAULT;
 	
+	/** O nó pertence ou não ao backbone*/
+	private boolean insideBackbone;
+	
+	/** Marco global de tempo no qual este nó irá acordar*/
+	private double cycleStartGlobalSteps;
+	
+	
+	
 	
 	/** Construtor */
 	public EXMacConfiguration(double lengthCycle, boolean ack) {
@@ -129,6 +137,10 @@ public class EXMacConfiguration {
 		}
 		return stepsToSleep;
 	}
+	
+	public double getNextCycleGlobalStep() {
+		return cycleStartGlobalSteps;
+	}
 
 	public double getStepsCS() {
 		return stepsCS;
@@ -173,11 +185,28 @@ public class EXMacConfiguration {
 	public double getSignalStrength() {
 		return signalStrength;
 	}
+	
+	public boolean isBackboneNode() {
+		return insideBackbone;
+	}
 
 	public void setSignalStrength(double signalStrength) {
 		this.signalStrength = signalStrength;
 	}
 
+	public void updateNextCycleGlobalStep() {
+		cycleStartGlobalSteps += getStepsCycle();
+	}
+	
+	public void updateNextCycleGlobalStep(double previousNodeStartCycle) {
+		double cycleShift = stepsDelayTx(PacketType.CTS) + stepsDelayRx(PacketType.DATA) + 
+				getStepsCS() * 3;
+		if (ackRequested) {
+			cycleShift += stepsDelayTx(PacketType.ACK);
+		}
+		cycleStartGlobalSteps = previousNodeStartCycle + cycleShift;
+	}
+	
 	public int getLengthRTS() {
 		return lengthRTS;
 	}

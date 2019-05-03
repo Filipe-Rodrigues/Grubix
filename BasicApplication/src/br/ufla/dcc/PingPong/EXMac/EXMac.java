@@ -32,7 +32,7 @@ import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.node.Link;
 import br.ufla.dcc.grubix.simulator.node.MACLayer;
 import br.ufla.dcc.grubix.simulator.node.MACState;
-import br.ufla.dcc.PingPong.EXMac.EXMacState.XMacEventType;
+import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacEventType;
 import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacStateType;
 import br.ufla.dcc.PingPong.physicalX.EventCarrierSense;
 import br.ufla.dcc.PingPong.physicalX.EventCollisionDetect;
@@ -138,7 +138,7 @@ public class EXMac extends MACLayer {
      */
     public final void processWakeUpCall(WakeUpCall wuc) {
 
-    	XMacEventType event = XMacEventType.VOID;
+    	EXMacEventType event = EXMacEventType.VOID;
     	// Tratamento de evento de fim de marcação de tempo
         if (wuc instanceof EXMacWucTimeOut) {
         	
@@ -149,7 +149,7 @@ public class EXMac extends MACLayer {
     			return;        
     		}
         	//xState.setEvent(XMacEventType.TIME_OUT);
-    		event = XMacEventType.TIME_OUT;
+    		event = EXMacEventType.TIME_OUT;
         }
         
         // Tratamento dos eventos emitidos pela PHY.
@@ -160,10 +160,10 @@ public class EXMac extends MACLayer {
             	// Recebe evento da PHY informando se o canal está ocupado
             	if (((EventCarrierSense) cle).isChannelBusy()) { 
             		xState.setChannelBusy(true);
-            		event = XMacEventType.CHANNEL_BUSY;
+            		event = EXMacEventType.CHANNEL_BUSY;
             	} else {
             		xState.setChannelBusy(false);
-            		event = XMacEventType.CHANNEL_FREE;
+            		event = EXMacEventType.CHANNEL_FREE;
             	}
             }
             
@@ -176,28 +176,28 @@ public class EXMac extends MACLayer {
         	
             // Recebe evento da PHY quando uma mensagem é completamente enviada.
             if (cle instanceof SendingTerminated) {
-            	event = XMacEventType.MSG_SENT;
+            	event = EXMacEventType.MSG_SENT;
             	if(debug) System.out.println("MAC: " + this.id + ", Event = SendingTerminated - pack type = " + packet.getType());
             }
             
             // Recebe evento da PHY quando ocorre uma colisão na recepção de uma mensagem
             if (cle instanceof EventCollisionDetect) {
             //  vou manter esta função para debug. Não tem como a PHY saber que houve colisão, apenas erro de CRC.
-                event = XMacEventType.COLLISION;
+                event = EXMacEventType.COLLISION;
                 if (debug) System.out.println("MAC: " + this.id + ", Colisão informada pela PHY");
             }
             
             // Recebe evento da PHY quando uma mensagem está chegando
             if (cle instanceof StartOfFrameDelimiter) {
             	// O rádio indica que identificou o início de uma mensagem (Start of Frame Delimiter)
-                event = XMacEventType.SFD;
+                event = EXMacEventType.SFD;
             }
             
         } // Fim de tratamento dos eventos emitidos pela PHY.
         
         
         // SFD e COLLISION não serão tratados por enquanto
-    	if (event == XMacEventType.COLLISION || event == XMacEventType.SFD )
+    	if (event == EXMacEventType.COLLISION || event == EXMacEventType.SFD )
         	return;
         
         // Chamar a função que busca o novo estado, conforme o evento observado, e executa as ações pertinentes.
@@ -227,7 +227,7 @@ public class EXMac extends MACLayer {
 		
 		startSendDataProcess(llPacket);
 		
-		gotoNextState(XMacEventType.LOG_LINK); 
+		gotoNextState(EXMacEventType.LOG_LINK); 
         
 	}
 	
@@ -253,14 +253,14 @@ public class EXMac extends MACLayer {
         if (debug) System.out.println("MAC: " + this.id + ", Pacote tipo " + xPack.getType() 
 												 + " recebido de " + xPack.getSender().getId());
         
-        XMacEventType event;
+        EXMacEventType event;
         
         switch (xPack.getType()){
-            case RTS:  event = XMacEventType.RTS_RECEIVED; break;
-            case CTS:  event = XMacEventType.CTS_RECEIVED; break;
-            case ACK:  event = XMacEventType.ACK_RECEIVED; break;
-            case DATA: event = XMacEventType.DATA_RECEIVED; break;
-            default:   event = XMacEventType.VOID;
+            case RTS:  event = EXMacEventType.RTS_RECEIVED; break;
+            case CTS:  event = EXMacEventType.CTS_RECEIVED; break;
+            case ACK:  event = EXMacEventType.ACK_RECEIVED; break;
+            case DATA: event = EXMacEventType.DATA_RECEIVED; break;
+            default:   event = EXMacEventType.VOID;
         }
         
         gotoNextState(event);   
@@ -270,7 +270,7 @@ public class EXMac extends MACLayer {
     /**
      *  Função para chamar a XMacStateMachine, para decidir o próximo estado, e executar próximas ações
      */
-    private void gotoNextState (XMacEventType event){
+    private void gotoNextState (EXMacEventType event){
     	
      	/* Chama a State Machine para decidir qual será o próximo estado  */
     	if (xStateMachine.changeState(event)){
