@@ -28,10 +28,12 @@ import br.ufla.dcc.grubix.simulator.event.Packet;
 import br.ufla.dcc.grubix.simulator.event.SendingTerminated;
 import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
+import br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.node.Link;
 import br.ufla.dcc.grubix.simulator.node.MACLayer;
 import br.ufla.dcc.grubix.simulator.node.MACState;
+import br.ufla.dcc.PingPong.ToolsMiscellaneous;
 import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacEventType;
 import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacStateType;
 import br.ufla.dcc.PingPong.physicalX.EventCarrierSense;
@@ -90,6 +92,9 @@ public class EXMac extends MACLayer {
 
     /** Ativa funções de depuração */
     private boolean debug = false;
+    
+    /** Ferramenta para o VisualGrubix*/
+    private ToolsMiscellaneous misc = ToolsMiscellaneous.getInstance();
 
     
     /**
@@ -126,8 +131,24 @@ public class EXMac extends MACLayer {
     	// Define o novo estado e duração, e incrementa a sequência de estado
     	xStateMachine.changeStateBootNode();
     	createtWucTimeOut();
+    	//testBackbone();
     }
     
+    private void testBackbone() {
+    	if ((node.getId().asInt() - 1) % 11 == 0) {
+    		switchToBackbone();
+    	}
+    }
+    
+    private boolean switchToBackbone() {
+    	if (xConf.isBackboneNode()) {
+    		xConf.setBackboneState(true);
+    		BackboneConfigurationManager.getInstance().setBackboneState(node.getId(), true);
+        	misc.vGrubix(node.getId(), "Backbone", "DARK_BLUE");
+        	return true;
+    	}
+    	return false;
+    }
     
     /**
      *  Função padrão do Grubix para tratar eventos WakeUpCall

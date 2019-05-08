@@ -18,6 +18,7 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 
 package br.ufla.dcc.grubix.simulator;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 

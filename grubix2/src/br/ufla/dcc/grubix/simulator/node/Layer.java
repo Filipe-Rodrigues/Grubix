@@ -18,6 +18,8 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 
 package br.ufla.dcc.grubix.simulator.node;
 
+import java.io.Serializable;
+
 import org.apache.log4j.Logger;
 
 import br.ufla.dcc.grubix.simulator.Address;
@@ -59,7 +61,7 @@ import br.ufla.dcc.grubix.xml.ConfigurationException;
  * 
  * @author Andreas Kumlehn 
  */
-public abstract class Layer implements Configurable, StateIO {
+public abstract class Layer implements Configurable, StateIO, Serializable {
 	
 	/** Logger of the class Node. */
 	private static final Logger LOGGER = Logger.getLogger(Layer.class);

@@ -91,7 +91,7 @@ public final class Simulator {
 			// create empty map to fill later because NodeGenerator needs a
 			// SimulationManager reference to be able
 			// to create AirModules for Nodes.
-			SortedMap<NodeId, Node> allNodes = new TreeMap<NodeId, Node>();
+			SortedMap<NodeId, Node> allNodes = getNodes(false);
 			// get SimulationManager
 
 			SimulationManager sim = new SimulationManager(writer, allNodes);
@@ -114,15 +114,35 @@ public final class Simulator {
 			if (configuration.isLogging() && (writer != null)) {
 				writer.finishLogging();
 			}
-
+			
 			long seed = Configuration.getInstance().getRandomGenerator()
 					.getSeed();
 
 			LOGGER.info("Network Simulator is ending the SIMULATION. Good Bye! (seed: "
 					+ seed + ")");
+			
+			// Salva a configuração dos backbones. ÚTIL APENAS AO PROJETO EXMac!!!!
+			BackboneConfigurationManager.getInstance().close(true);
+			
+			System.err.println("SIMULAÇÃO TERMINADA COM SUCESSO!");
 		} catch (ConfigurationException e) {
 			LOGGER.error("Network Simlator has no valid configuration", e);
 			e.printStackTrace();
 		}
+	}
+	
+	private static SortedMap<NodeId, Node> getNodes(boolean loadedFromFile) {
+		if (loadedFromFile) {
+			try {
+				SortedMap<NodeId, Node> allNodes;
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return new TreeMap<NodeId, Node>();
+	}
+	
+	private static void writeNodesToFile() {
+		
 	}
 }

@@ -2,7 +2,7 @@ package br.ufla.dcc.PingPong.node;
 
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
-import br.ufla.dcc.PingPong.XMac.Stats.Simulation;
+import br.ufla.dcc.PingPong.BackboneXMac.Stats.Simulation;
 import br.ufla.dcc.grubix.simulator.node.ApplicationLayer;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.Finalize;

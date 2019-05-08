@@ -21,20 +21,20 @@
     <node name="REGULAR" count="250">
         <layers>
         	<application>
-                <class>br.ufla.dcc.PingPong.node.XMacRegularNode2</class>
+                <class>br.ufla.dcc.PingPong.node.EXMacRegularNode</class>
                 
             </application>
             <operatingSystem>
                 <class>br.ufla.dcc.grubix.simulator.node.user.os.NullOperatingSystemLayer</class>
             </operatingSystem>
             <network>
-                <class>br.ufla.dcc.PingPong.routing.GeoRouting</class>
+                <class>br.ufla.dcc.PingPong.routing.EXMac.EXMacRouting</class>
             </network>
             <logLink>
                 <class>br.ufla.dcc.PingPong.Llc.LogLinkControl</class>
             </logLink>
             <mac>
-                <class>br.ufla.dcc.PingPong.XMac.XMac</class>
+                <class>br.ufla.dcc.PingPong.EXMac.EXMac</class>
                 <params>
                     <param name="cycleTime">0.1</param>
                     <param name="ackRequested">false</param>
@@ -77,17 +77,15 @@
             <!-- Define a posição dos nós informados baseado nos parametros -->
             <!--<class>br.ufla.dcc.PingPong.PaxMac.PaxRandomStartPositions</class>-->
             <!--<class>br.ufla.dcc.grubix.simulator.movement.FromFileStartPositions</class>-->
-            <class>br.ufla.dcc.PingPong.movement.BackboneRandomStartPositions</class>
+            <class>br.ufla.dcc.PingPong.movement.EXMacRandomStartPositions</class>
             <!--<class>br.ufla.dcc.grubix.simulator.movement.GridPositionGenerator</class>-->
             <params>
+            	<!-- SOMENTE PARA GridPositionGenerator-->
             	<!--<param name="xNodeDistance">20</param>-->
             	<!--<param name="yNodeDistance">20</param>-->
-                <!-- Somente para PaxRandomStartPositions (posicoes x,y)-->
-                <!--<param name="sourceNodes">20,20</param>-->
-                <!--<param name="destinationNodes">480,480</param>-->
-                <!-- SOMENTE PARA BackboneRandomStartPositions -->
+                <!-- SOMENTE PARA EXMacRandomStartPositions -->
                 <param name="testingCase">1</param>
-                <param name="forceCenterNode">true</param>
+                <param name="forceCenterNodes">true</param>
             </params>
         </generator>
         <targetfile>startpositions.xml</targetfile>

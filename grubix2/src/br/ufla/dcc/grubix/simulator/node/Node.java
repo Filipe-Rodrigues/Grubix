@@ -18,6 +18,7 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 
 package br.ufla.dcc.grubix.simulator.node;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,7 +74,7 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
  * 
  * @author Andreas Kumlehn, Dirk Held
  */
-public class Node implements Configurable {
+public class Node implements Configurable, Serializable {
 	
 	/**--------Atributos Jesimar--------*/
 	
@@ -91,7 +92,7 @@ public class Node implements Configurable {
 	
 	
 	/** Logger of the class Node. */
-	private static final Logger LOGGER = Logger.getLogger(Node.class);
+	private static transient final Logger LOGGER = Logger.getLogger(Node.class);
 	
 	/** The unique ID of the node. */
 	private final NodeId id;

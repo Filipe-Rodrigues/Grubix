@@ -190,6 +190,10 @@ public class EXMacConfiguration {
 		return insideBackbone;
 	}
 
+	public void setBackboneState(boolean backboneState) {
+		this.insideBackbone = backboneState;
+	}
+	
 	public void setSignalStrength(double signalStrength) {
 		this.signalStrength = signalStrength;
 	}

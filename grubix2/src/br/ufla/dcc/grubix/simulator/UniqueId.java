@@ -18,13 +18,15 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 
 package br.ufla.dcc.grubix.simulator;
 
+import java.io.Serializable;
+
 /** 
  * Abstract superclass for all types of IDs used during the SIMULATION.
  * The numbering of ids has to be implemented in the subclasses.
  * 
  * @author Andreas Kumlehn
  */
-public abstract class UniqueId implements Comparable<UniqueId> {
+public abstract class UniqueId implements Comparable<UniqueId>, Serializable {
 	
 	/**
 	 * The actual ID of one instance.

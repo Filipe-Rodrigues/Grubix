@@ -18,6 +18,7 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 
 package br.ufla.dcc.grubix.simulator.kernel;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -66,7 +67,7 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
  * 
  * @author Andreas Kumlehn, Dirk Meister
  */
-public final class Configuration implements Configurable {
+public final class Configuration implements Configurable, Serializable {
 	
 	/**---------Codigo Jesimar----------*/
 	
@@ -112,7 +113,7 @@ public final class Configuration implements Configurable {
 	private double propagationDelay;
 
 	/** Logger of the class Configuration. */
-	private static final Logger LOGGER = Logger.getLogger(Configuration.class);
+	private static transient final Logger LOGGER = Logger.getLogger(Configuration.class);
 
 	/**
 	 * singleton configuration instance.
@@ -161,7 +162,7 @@ public final class Configuration implements Configurable {
 	 * the SimulationManager directly.
 	 */
 	@ShoXParameter(defaultClass = SimulationManagerKernel.class)
-	private SimulationKernel kernel;
+	private transient SimulationKernel kernel;
 	
 	/** 
 	 * Filepath to the nodes file. Needed by NodeGenerator. 

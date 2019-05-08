@@ -1,6 +1,6 @@
 package br.ufla.dcc.PingPong.AgaMac;
 
-import br.ufla.dcc.PingPong.XMac.XMacPacket;
+import br.ufla.dcc.PingPong.XMac2019.XMacPacket;
 import br.ufla.dcc.grubix.simulator.Address;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 

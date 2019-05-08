@@ -7,8 +7,8 @@ import java.util.Locale;
 
 import br.ufla.dcc.PingPong.PaxMac.PaxMacConfiguration;
 import br.ufla.dcc.PingPong.PaxMac.PaxMacPacket;
-import br.ufla.dcc.PingPong.XMac.XMacConfiguration;
-import br.ufla.dcc.PingPong.XMac.XMacPacket;
+import br.ufla.dcc.PingPong.XMac2019.XMacConfiguration;
+import br.ufla.dcc.PingPong.XMac2019.XMacPacket;
 import br.ufla.dcc.grubix.simulator.LayerType;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.Packet;
