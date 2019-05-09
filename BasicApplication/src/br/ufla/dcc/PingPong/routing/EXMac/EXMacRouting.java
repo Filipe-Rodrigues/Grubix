@@ -12,6 +12,7 @@ import br.ufla.dcc.grubix.simulator.Position;
 import br.ufla.dcc.grubix.simulator.event.Packet;
 import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
+import br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 import br.ufla.dcc.grubix.simulator.node.NetworkLayer;
 import br.ufla.dcc.grubix.simulator.node.Node;
@@ -122,6 +123,11 @@ public class EXMacRouting extends NetworkLayer {
 	}
 	
 	private interface EXMacBackboneGenerator {
+		public static final Position LEFT = new Position(-1, 0);
+		public static final Position RIGHT = new Position(1, 0);
+		public static final Position UP = new Position(-1, 0);
+		public static final Position DOWN = new Position(1, 0);
+		
 		void startBackbone();
 		void includeBackboneNeighbor(NodeId newBackboneNeighbor);
 		void convertToBackbone();
@@ -131,8 +137,12 @@ public class EXMacRouting extends NetworkLayer {
 
 		@Override
 		public void startBackbone() {
-			// TODO Auto-generated method stub
-			
+			if (node.getId().asInt() == 10) {
+				NodeId nextNeighbor = selectNextNeighbor(RIGHT);
+				if (nextNeighbor != null) {
+					
+				}
+			}
 		}
 
 		@Override
@@ -144,6 +154,10 @@ public class EXMacRouting extends NetworkLayer {
 		@Override
 		public void convertToBackbone() {
 			// TODO Auto-generated method stub
+			
+		}
+		
+		private NodeId selectNextNeighbor(Position direction) {
 			
 		}
 		

@@ -54,6 +54,16 @@ public class Position {
 		return yCoord;
 	}
 	
+	/** @return Returns the sum of the distance vectors*/
+	public final Position sum(Position pos) {
+		return new Position(xCoord + pos.xCoord, yCoord + pos.yCoord);
+	}
+	
+	/** @return Returns the multiplication between the coordinates of the distance vectors*/
+	public final Position mult(Position pos) {
+		return new Position(xCoord * pos.xCoord, yCoord * pos.yCoord);
+	}
+	
 	/**
 	 * Method to calculate the euclidean distance between an instance
 	 * and another given position.

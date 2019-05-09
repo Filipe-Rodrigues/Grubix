@@ -69,9 +69,16 @@ public class BackboneConfigurationManager {
 	
 	public boolean amIBackbone(NodeId myId) {
 		if (allNodesConfigurations.containsKey(myId)) {
-			return allNodesConfigurations.get(myId).isBackbone;
+			return allNodesConfigurations.get(myId).nextBackboneNode != null;
 		}
 		return false;
+	}
+	
+	public NodeId getNextBackboneNode(NodeId myId) {
+		if (amIBackbone(myId)) {
+			return allNodesConfigurations.get(myId).nextBackboneNode;
+		}
+		return null;
 	}
 	
 	public List<NodeId> loadBackboneNeighbors(NodeId myId) {
@@ -87,9 +94,9 @@ public class BackboneConfigurationManager {
 		}
 	}
 	
-	public void setBackboneState(NodeId myId, boolean myState) {
+	public void setNextBackboneNode(NodeId myId, NodeId nextNode) {
 		ensureNodeRagistration(myId);
-		allNodesConfigurations.get(myId).isBackbone = myState;
+		allNodesConfigurations.get(myId).nextBackboneNode = nextNode;
 	}
 	
 	public void addBackboneNeighbor(NodeId myId, NodeId neighborId) {
@@ -101,11 +108,11 @@ public class BackboneConfigurationManager {
 		
 		private static final long serialVersionUID = 1L;
 		
-		boolean isBackbone;
+		NodeId nextBackboneNode;
 		List<NodeId> backboneNeighbors;
 		
 		public BackboneConfiguration() {
-			isBackbone = false;
+			nextBackboneNode = null;
 			backboneNeighbors = new ArrayList<NodeId>();
 		}
 	}
