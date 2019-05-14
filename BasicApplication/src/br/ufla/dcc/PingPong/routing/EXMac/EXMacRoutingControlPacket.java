@@ -9,14 +9,27 @@ import br.ufla.dcc.grubix.simulator.event.Packet;
 public class EXMacRoutingControlPacket extends NetworkPacket {
 
 	private Position growthDirection;
+	private Position backboneLineRoot;
+	private NodeId nextSelectedBackbone;
 	
-	public EXMacRoutingControlPacket(Address sender, NodeId receiver, Packet packet, Position direction) {
-		super(sender, receiver, packet);
+	public EXMacRoutingControlPacket(Address sender, NodeId receiver, Position direction, 
+			Position backboneRoot, NodeId nextBackbone) {
+		super(sender, receiver);
 		growthDirection = direction;
+		backboneLineRoot = backboneRoot;
+		nextSelectedBackbone = nextBackbone;
 	}
 	
 	public Position getGrowthDirection() {
 		return growthDirection;
+	}
+
+	public Position getBackboneLineRoot() {
+		return backboneLineRoot;
+	}
+
+	public NodeId getNextSelectedBackbone() {
+		return nextSelectedBackbone;
 	}
 
 }

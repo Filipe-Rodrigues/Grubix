@@ -13,37 +13,39 @@ import br.ufla.dcc.grubix.simulator.event.Packet;
 import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager;
+import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 import br.ufla.dcc.grubix.simulator.node.NetworkLayer;
 import br.ufla.dcc.grubix.simulator.node.Node;
+import br.ufla.dcc.grubix.xml.ShoXParameter;
 
 public class EXMacRouting extends NetworkLayer {
 
 	/** Objeto para a depuração */
 	ToolsDebug debug = ToolsDebug.getInstance();
 
+	@ShoXParameter(description = "", defaultValue = "0.9d")
+	private double backboneBoundaryRatio;
+
 	/** Lista de nós vizinhos */
 	private List<Node> neighbors = null;
 	private List<NodeId> backboneNeighbors = null;
-	
-	/** Controla se sou ou não um nó interno ao backbone */
-	private boolean amIBackbone;
-	
-	/** Caso eu seja um nó backbone, este é o meu sucessor na cadeia*/
+
+	/** Caso eu seja um nó backbone, este é o meu sucessor na cadeia */
 	private Node nextBackboneNode;
-	
-	/** Posição foco da heurística de formação dos backbones*/
+
+	/** Posição foco da heurística de formação dos backbones */
 	private Position hypocenter;
-	
-	/** Objeto de invocação do gerador de backbones*/
+
+	/** Objeto de invocação do gerador de backbones */
 	private EXMacBackboneGenerator generator;
 
 	public EXMacRouting() {
 		backboneNeighbors = new ArrayList<>();
 		generator = new HeuristicA();
-		
+
 	}
-	
+
 	/** Função para obter o nó vizinho mais próximo do destino */
 	private NodeId getMinDistanceNodeId(Position destinationPosition) {
 		NodeId minDistanceNodeId = null;
@@ -82,6 +84,10 @@ public class EXMacRouting extends NetworkLayer {
 		sendPacket(newPacket);
 	}
 
+	private void announceConversion(Position direction) {
+		EXMacRoutingControlPacket packet = new EXMacRoutingControlPacket(sender, NodeId.ALLNODES, direction, hypocenter, nextBackboneNode.getId());
+	}
+	
 	@Override
 	public void lowerSAP(Packet packet) throws LayerException {
 		if (packet instanceof GeoRoutingPacket) {
@@ -112,55 +118,119 @@ public class EXMacRouting extends NetworkLayer {
 	@Override
 	protected void processEvent(StartSimulation start) {
 		super.processEvent(start);
-		if (node.getId().asInt() == 10) {
-			initializeBackbonePaths();
-		}
+		generator.startBackbone();
 	}
 
 	@Override
 	public void processWakeUpCall(WakeUpCall wuc) throws LayerException {
 		debug.write(sender);
 	}
-	
+
 	private interface EXMacBackboneGenerator {
 		public static final Position LEFT = new Position(-1, 0);
 		public static final Position RIGHT = new Position(1, 0);
 		public static final Position UP = new Position(-1, 0);
 		public static final Position DOWN = new Position(1, 0);
-		
+
 		void startBackbone();
+
 		void includeBackboneNeighbor(NodeId newBackboneNeighbor);
+
 		void convertToBackbone();
 	}
-	
+
 	private class HeuristicA implements EXMacBackboneGenerator {
 
+		private double maxX = Configuration.getInstance().getXSize();
+		private double maxY = Configuration.getInstance().getYSize();
+		
 		@Override
 		public void startBackbone() {
+			Node nextNeighbor = null;
 			if (node.getId().asInt() == 10) {
-				NodeId nextNeighbor = selectNextNeighbor(RIGHT);
-				if (nextNeighbor != null) {
-					
-				}
+				hypocenter = node.getPosition();
+				nextNeighbor = selectNextNeighbor(RIGHT);
+			} else if (node.getId().asInt() == 11) {
+				hypocenter = node.getPosition();
+				nextNeighbor = selectNextNeighbor(DOWN);
+			} else if (node.getId().asInt() == 12) {
+				hypocenter = node.getPosition();
+				nextNeighbor = selectNextNeighbor(LEFT);
+			} else if (node.getId().asInt() == 13) {
+				hypocenter = node.getPosition();
+				nextNeighbor = selectNextNeighbor(UP);
+			}
+			if (nextNeighbor != null) {
+				nextBackboneNode = nextNeighbor;
+				announceConversion();
 			}
 		}
 
 		@Override
 		public void includeBackboneNeighbor(NodeId newBackboneNeighbor) {
-			// TODO Auto-generated method stub
-			
+			backboneNeighbors.add(newBackboneNeighbor);
 		}
 
 		@Override
 		public void convertToBackbone() {
-			// TODO Auto-generated method stub
 			
 		}
-		
-		private NodeId selectNextNeighbor(Position direction) {
-			
+
+		private Node selectNextNeighbor(Position direction) {
+			Node selectedNode = null;
+			for (Node neighbor : neighbors) {
+				if (!backboneNeighbors.contains(neighbor.getId()) && isEligible(neighbor.getPosition(), direction)) {
+					if (selectedNode == null 
+							|| isMoreAlignedThan(neighbor.getPosition(), selectedNode.getPosition(), direction)) {
+						selectedNode = neighbor;
+					}
+				}
+			}
+			if (selectedNode != null) {
+				return selectedNode;
+			}
+
+			return null;
 		}
 		
+		private boolean isEligible(Position pos, Position direction) {
+			double posX = pos.getXCoord();
+			double posY = pos.getYCoord();
+			double lowerXBound = Configuration.getInstance().getXSize() * (1 - backboneBoundaryRatio);
+			double upperXBound = Configuration.getInstance().getXSize() * backboneBoundaryRatio;
+			double lowerYBound = Configuration.getInstance().getYSize() * (1 - backboneBoundaryRatio);
+			double upperYBound = Configuration.getInstance().getYSize() * backboneBoundaryRatio;
+			boolean isFartherFromHypo = node.getPosition().getDistance(hypocenter) < pos.getDistance(hypocenter);
+			boolean isGoingAtCorrectDirection = true;
+			if (direction == LEFT) {
+				isGoingAtCorrectDirection = pos.getXCoord() < hypocenter.getXCoord();
+			} else if (direction == RIGHT) {
+				isGoingAtCorrectDirection = pos.getXCoord() > hypocenter.getXCoord();
+			} else if (direction == UP) {
+				isGoingAtCorrectDirection = pos.getYCoord() < hypocenter.getYCoord();
+			} else if (direction == DOWN) {
+				isGoingAtCorrectDirection = pos.getYCoord() > hypocenter.getYCoord();
+			}
+			return (posX > lowerXBound && posX < upperXBound && posY > lowerYBound && posY < upperYBound)
+					 && isFartherFromHypo && isGoingAtCorrectDirection;
+		}
+		
+		private boolean isMoreAlignedThan(Position test, Position reference, Position axis) {
+			Position testAux;
+			Position refAux;
+			Position hypAux;
+			if (axis.getXCoord() != 0) {
+				testAux = new Position(0, test.getYCoord());
+				refAux = new Position(0, reference.getYCoord());
+				hypAux = new Position(0, hypocenter.getYCoord());
+			} else {
+				testAux = new Position(test.getXCoord(), 0);
+				refAux = new Position(reference.getXCoord(), 0);
+				hypAux = new Position(hypocenter.getXCoord(), 0);
+			}
+			return testAux.getDistance(hypAux) < refAux.getDistance(hypAux);
+		}
+
 	}
 
 }
