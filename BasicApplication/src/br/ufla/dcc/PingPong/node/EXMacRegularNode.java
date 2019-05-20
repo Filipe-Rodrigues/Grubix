@@ -59,7 +59,7 @@ public class EXMacRegularNode extends ApplicationLayer {
 		
 		
 		
-		if (node.getId().asInt() == 1) {			
+		if (node.getId().asInt() == -1) {			
 			// Cria um evento wakeUpCall para si mesma para acordar após 1000 steps
 			//System.out.println("currentregularnode - node=1");
 				PingPongWakeUpCall wakeUpCall = new PingPongWakeUpCall(sender, 2000);

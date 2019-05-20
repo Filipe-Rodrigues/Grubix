@@ -18,6 +18,8 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 
 package br.ufla.dcc.grubix.simulator;
 
+import java.io.Serializable;
+
 /** 
  * Class to store POSITION of a node.
  * 
@@ -25,7 +27,7 @@ package br.ufla.dcc.grubix.simulator;
  * 
  * @author Andreas Kumlehn
  */
-public class Position {
+public class Position implements Serializable {
 	
 	/** XCoordinate of the POSITION. */
 	private final double xCoord;

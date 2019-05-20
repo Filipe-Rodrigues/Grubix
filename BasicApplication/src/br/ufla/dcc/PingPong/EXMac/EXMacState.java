@@ -67,6 +67,9 @@ public class EXMacState extends LayerState {
     
     /** Indica que há mensagem de dados a ser enviada. Usado quando termina o tempo de Sleep */
     private boolean dataPending;
+    
+    /** Flag que controla se o nó espera um DATA de um BroadCast */
+    private boolean waitingBroadcast;
  
     
 	/** Default constructor */
@@ -189,12 +192,21 @@ public class EXMacState extends LayerState {
 	public void setDataPending(boolean dataPending) {
 		this.dataPending = dataPending;
 	}
+	
+	public boolean isWaitingBroadcast() {
+		return waitingBroadcast;
+	}
 
+
+	public void setWaitingBroadcast(boolean waitingBroadcast) {
+		this.waitingBroadcast = waitingBroadcast;
+	}
 
 	/* 
 	 * Enumerations
 	 */
- 
+
+
 	/**
 	 * Esse enum implementa os possiveis estados da MAC de um nó sensor, que utiliza X_MAC. 
 	 * 

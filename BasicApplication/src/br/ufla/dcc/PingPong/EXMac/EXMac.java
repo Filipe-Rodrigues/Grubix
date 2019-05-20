@@ -40,6 +40,7 @@ import br.ufla.dcc.PingPong.physicalX.EventCarrierSense;
 import br.ufla.dcc.PingPong.physicalX.EventCollisionDetect;
 import br.ufla.dcc.PingPong.physicalX.EventPhyTurnRadio;
 import br.ufla.dcc.PingPong.physicalX.StartOfFrameDelimiter;
+import br.ufla.dcc.PingPong.routing.EXMac.EXMacRoutingControlPacket;
 import br.ufla.dcc.grubix.xml.ConfigurationException;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
@@ -141,9 +142,9 @@ public class EXMac extends MACLayer {
     }
     
     private boolean switchToBackbone() {
-    	if (xConf.isBackboneNode()) {
+    	if (!xConf.isBackboneNode()) {
     		xConf.setBackboneState(true);
-    		BackboneConfigurationManager.getInstance().setBackboneState(node.getId(), true);
+    		//BackboneConfigurationManager.getInstance().setBackboneState(node.getId(), true);
         	misc.vGrubix(node.getId(), "Backbone", "DARK_BLUE");
         	return true;
     	}
@@ -233,8 +234,8 @@ public class EXMac extends MACLayer {
 	*/
 	public final void upperSAP(Packet llPacket) {
 		
-		if (this.node.getId().asInt() == 1)  { 
-			System.out.println("\n  +  Este é o X-MAC 2019  +\n");
+		if (this.node.getId().asInt() == 10)  { 
+			System.out.println("\n  +  Este é o EX-MAC 2019  +\n");
 			xConf.imprimeParametros();
 		}
 		
@@ -246,6 +247,11 @@ public class EXMac extends MACLayer {
 			return;
 		}
 		
+		if (llPacket.getEnclosedPacket() instanceof EXMacRoutingControlPacket) {
+			//System.err.println("FOI");
+			switchToBackbone();
+		}
+
 		startSendDataProcess(llPacket);
 		
 		gotoNextState(EXMacEventType.LOG_LINK); 

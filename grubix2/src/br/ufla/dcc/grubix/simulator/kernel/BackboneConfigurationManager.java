@@ -12,14 +12,17 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import br.ufla.dcc.grubix.simulator.NodeId;
+import br.ufla.dcc.grubix.simulator.Position;
 
 /**
  * ESSA CLASSE SERVE APENAS COMO SUPORTE AOS TESTES DO EXMac!!!
  * SE VOCÊ NÃO FOR TRABALHAR COM ELA, EXCLUA ESSE ARQUIVO OU MODIFIQUE COMO DESEJAR!!!
  * 
  * */
-public class BackboneConfigurationManager {
+public class BackboneConfigurationManager implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	private SortedMap<NodeId, BackboneConfiguration> allNodesConfigurations;
 	private static BackboneConfigurationManager singleton;
 	
@@ -42,8 +45,9 @@ public class BackboneConfigurationManager {
 	
 	private static void saveConfiguration() {
 		try {
-			FileOutputStream fos = new FileOutputStream(
-					new File(System.getProperty("user.dir") + "/backbone_config/config.dat"));
+			File file = new File(System.getProperty("user.dir") + "/backbone_config/config.dat");
+			file.createNewFile();
+			FileOutputStream fos = new FileOutputStream(file);
 			ObjectOutputStream oos = new ObjectOutputStream(fos);
 			oos.writeObject(singleton);
 			oos.close();
@@ -81,6 +85,13 @@ public class BackboneConfigurationManager {
 		return null;
 	}
 	
+	public Position getBackboneDirection(NodeId myId) {
+		if (amIBackbone(myId)) {
+			return allNodesConfigurations.get(myId).direction;
+		}
+		return null;
+	}
+	
 	public List<NodeId> loadBackboneNeighbors(NodeId myId) {
 		if (allNodesConfigurations.containsKey(myId)) {
 			return allNodesConfigurations.get(myId).backboneNeighbors;
@@ -88,19 +99,20 @@ public class BackboneConfigurationManager {
 		return new ArrayList<NodeId>();
 	}
 	
-	private void ensureNodeRagistration(NodeId myId) {
+	private void ensureNodeRegistration(NodeId myId) {
 		if (!allNodesConfigurations.containsKey(myId)) {
 			allNodesConfigurations.put(myId, new BackboneConfiguration());
 		}
 	}
 	
-	public void setNextBackboneNode(NodeId myId, NodeId nextNode) {
-		ensureNodeRagistration(myId);
+	public void setNextBackboneNode(NodeId myId, NodeId nextNode, Position direction) {
+		ensureNodeRegistration(myId);
 		allNodesConfigurations.get(myId).nextBackboneNode = nextNode;
+		allNodesConfigurations.get(myId).direction = direction;
 	}
 	
 	public void addBackboneNeighbor(NodeId myId, NodeId neighborId) {
-		ensureNodeRagistration(myId);
+		ensureNodeRegistration(myId);
 		allNodesConfigurations.get(myId).backboneNeighbors.add(neighborId);
 	}
 	
@@ -109,6 +121,7 @@ public class BackboneConfigurationManager {
 		private static final long serialVersionUID = 1L;
 		
 		NodeId nextBackboneNode;
+		Position direction;
 		List<NodeId> backboneNeighbors;
 		
 		public BackboneConfiguration() {

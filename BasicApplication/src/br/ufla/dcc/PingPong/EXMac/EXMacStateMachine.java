@@ -94,6 +94,11 @@ public class EXMacStateMachine  {
     					changeState = setNewState(EXMacStateType.CS, xConf.getStepsCS(), EXMacActionType.TURN_ON);
     					if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, Event = TIME_OUT, falhou envio de DATA" );
     				}
+    			} else if (xState.isWaitingBroadcast()) {
+    				xState.setWaitingBroadcast(false);
+    				//System.err.println("ACORDEI EM: " + SimulationManager.getInstance().getCurrentTime() + " steps");
+    				changeState = setNewState(EXMacStateType.WAITING_DATA, xConf.stepsDelayRx(PacketType.DATA), EXMacActionType.TURN_ON);
+    				if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, Event = TIME_OUT com waitingBroadcast" );
     			} else {
     	        	changeState = setNewState(EXMacStateType.CS, xConf.getStepsCS(), EXMacActionType.TURN_ON);
     	        	if(debug) System.out.println("Machine: " + address.getId()+ " State = SLEEP, Event = TIME_OUT" );
@@ -300,6 +305,7 @@ public class EXMacStateMachine  {
     		break;
     			
     		case MSG_SENT:
+    			//System.err.println("TERMINEI O ENVIO EM: " + SimulationManager.getInstance().getCurrentTime() + " steps");
     			/* Se o rádio enviou DATA, então espere por uma resposta ACK, se necessáio */
     			if (xState.getDataPkt().isAckRequested()){
     				changeState = setNewState(EXMacStateType.WAITING_ACK, xConf.stepsDelayRx(PacketType.ACK), EXMacActionType.TURN_ON);
@@ -368,6 +374,7 @@ public class EXMacStateMachine  {
     				} else {
     					/* Fim da sequência de RTS, mensagem BroadCast, todos os vizinhos estão acordados.
     					 * Logo pode enviar a mensagem.                                                    */
+    					//System.err.println("COMECEI ENVIAR EM: " + SimulationManager.getInstance().getCurrentTime() + " steps");
     					changeState = setNewState(EXMacStateType.SENDING_DATA, xConf.stepsDelayTx(PacketType.DATA), EXMacActionType.MSG_DOWN);
     					if(debug) System.out.println("Machine: " + address.getId()+ " State = WAITING_CTS - Mensagem Broadcast - envia DATA ");
     				}
@@ -400,8 +407,8 @@ public class EXMacStateMachine  {
         case WAITING_DATA: 
          	/* MAC está esperando receber uma mensagem DATA pelo rádio.   */ 
     		switch (event){
-    		
     		case TIME_OUT:
+    			System.err.println("PERDI A MSG");
     			/* Acabou o tempo e não recebeu o pacote de dados, então o próximo estado será CS, 
     			 * pois talvez outro nó queira transmitir uma mensagem                             */
      			changeState = goToSleep(EXMacActionType.TURN_OFF);
@@ -508,8 +515,10 @@ public class EXMacStateMachine  {
 	     * Vá para Sleep até que chegue a hora do envio de DATA.
 	     * Espera = (número de RTS que faltam) * (intervalo entre envios de RTS) */
 	    else if (xState.getRecPkt().getReceiver() == NodeId.ALLNODES){
-	    	double delay = xState.getRecPkt().getRetryCount() * (xConf.getStepsRTS() + xConf.stepsDelayRx(PacketType.CTS));
+	    	double delay = xState.getRecPkt().getRetryCount() 
+	    			* (xConf.getStepsRTS() + xConf.stepsDelayRx(PacketType.CTS)) - xConf.getStepsRTS();
 	    	changeState = setNewState(EXMacStateType.SLEEP, delay, EXMacActionType.TURN_OFF);
+	    	xState.setWaitingBroadcast(true);
 	    	if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED broadcast" );
 	    }
 	    else {

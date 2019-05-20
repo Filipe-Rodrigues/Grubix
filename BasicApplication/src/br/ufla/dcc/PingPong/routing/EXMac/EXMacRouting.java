@@ -24,7 +24,7 @@ public class EXMacRouting extends NetworkLayer {
 	/** Objeto para a depuração */
 	ToolsDebug debug = ToolsDebug.getInstance();
 
-	@ShoXParameter(description = "", defaultValue = "0.9d")
+	@ShoXParameter(description = "Porção máxima do campo em que os backbones poderão se propagar. 1 = 100% do campo.", defaultValue = "0.95d")
 	private double backboneBoundaryRatio;
 
 	/** Lista de nós vizinhos */
@@ -33,7 +33,7 @@ public class EXMacRouting extends NetworkLayer {
 
 	/** Caso eu seja um nó backbone, este é o meu sucessor na cadeia */
 	private Node nextBackboneNode;
-
+	
 	/** Posição foco da heurística de formação dos backbones */
 	private Position hypocenter;
 
@@ -42,7 +42,6 @@ public class EXMacRouting extends NetworkLayer {
 
 	public EXMacRouting() {
 		backboneNeighbors = new ArrayList<>();
-		generator = new HeuristicA();
 
 	}
 
@@ -65,9 +64,7 @@ public class EXMacRouting extends NetworkLayer {
 	}
 
 	private void routePacket(Packet packet) {
-		if (this.neighbors == null) {
-			this.neighbors = node.getNeighbors();
-		}
+		ensureNeighborhoodInitialization();
 
 		Position destinationPosition = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
 				.getPosition();
@@ -85,7 +82,17 @@ public class EXMacRouting extends NetworkLayer {
 	}
 
 	private void announceConversion(Position direction) {
-		EXMacRoutingControlPacket packet = new EXMacRoutingControlPacket(sender, NodeId.ALLNODES, direction, hypocenter, nextBackboneNode.getId());
+		EXMacRoutingControlPacket packet = new EXMacRoutingControlPacket(sender, NodeId.ALLNODES, 
+				direction, hypocenter, (nextBackboneNode == node) ? (null) : (nextBackboneNode.getId()));
+		BackboneConfigurationManager.getInstance().setNextBackboneNode(node.getId(), nextBackboneNode.getId()
+				, direction);
+		sendPacket(packet);
+	}
+	
+	private void ensureNeighborhoodInitialization() {
+		if (this.neighbors == null) {
+			this.neighbors = node.getNeighbors();
+		}
 	}
 	
 	@Override
@@ -106,6 +113,21 @@ public class EXMacRouting extends NetworkLayer {
 				// --------------------------------------------------
 				routePacket(enclosed);
 			}
+		} else if (packet instanceof EXMacRoutingControlPacket) {
+			EXMacRoutingControlPacket controlPacket = (EXMacRoutingControlPacket) packet;
+			NodeId senderID = controlPacket.getSender().getId();
+			if (!backboneNeighbors.contains(senderID)) {
+				backboneNeighbors.add(senderID);
+				BackboneConfigurationManager.getInstance().addBackboneNeighbor(node.getId(), senderID);
+			}
+			if (nextBackboneNode == null) {
+				NodeId next = controlPacket.getNextSelectedBackbone();
+				if (next != null && next.equals(node.getId())) {
+					hypocenter = controlPacket.getBackboneLineRoot();
+					generator = new HeuristicA(controlPacket.getGrowthDirection());
+					generator.convertToBackbone();
+				}
+			}
 		}
 	}
 
@@ -118,7 +140,19 @@ public class EXMacRouting extends NetworkLayer {
 	@Override
 	protected void processEvent(StartSimulation start) {
 		super.processEvent(start);
-		generator.startBackbone();
+		if (node.getId().asInt() == 10) {
+			generator = new HeuristicA(EXMacBackboneGenerator.RIGHT);
+			generator.startBackbone();
+		} else if (node.getId().asInt() == 11) {
+			generator = new HeuristicA(EXMacBackboneGenerator.DOWN);
+			generator.startBackbone();
+		} else if (node.getId().asInt() == 12) {
+			generator = new HeuristicA(EXMacBackboneGenerator.LEFT);
+			generator.startBackbone();
+		} else if (node.getId().asInt() == 13) {
+			generator = new HeuristicA(EXMacBackboneGenerator.UP);
+			generator.startBackbone();
+		}
 	}
 
 	@Override
@@ -129,8 +163,8 @@ public class EXMacRouting extends NetworkLayer {
 	private interface EXMacBackboneGenerator {
 		public static final Position LEFT = new Position(-1, 0);
 		public static final Position RIGHT = new Position(1, 0);
-		public static final Position UP = new Position(-1, 0);
-		public static final Position DOWN = new Position(1, 0);
+		public static final Position UP = new Position(0, -1);
+		public static final Position DOWN = new Position(0, 1);
 
 		void startBackbone();
 
@@ -141,29 +175,21 @@ public class EXMacRouting extends NetworkLayer {
 
 	private class HeuristicA implements EXMacBackboneGenerator {
 
-		private double maxX = Configuration.getInstance().getXSize();
-		private double maxY = Configuration.getInstance().getYSize();
+		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
+		private Position travelDirection;
+		
+		/** Acesso rápido às coordenadas máximas do campo */
+		private final double MAX_X = Configuration.getInstance().getXSize();
+		private final double MAX_Y = Configuration.getInstance().getYSize();
+
+		private HeuristicA(Position travelDirection) {
+			this.travelDirection = travelDirection;
+		}
 		
 		@Override
 		public void startBackbone() {
-			Node nextNeighbor = null;
-			if (node.getId().asInt() == 10) {
-				hypocenter = node.getPosition();
-				nextNeighbor = selectNextNeighbor(RIGHT);
-			} else if (node.getId().asInt() == 11) {
-				hypocenter = node.getPosition();
-				nextNeighbor = selectNextNeighbor(DOWN);
-			} else if (node.getId().asInt() == 12) {
-				hypocenter = node.getPosition();
-				nextNeighbor = selectNextNeighbor(LEFT);
-			} else if (node.getId().asInt() == 13) {
-				hypocenter = node.getPosition();
-				nextNeighbor = selectNextNeighbor(UP);
-			}
-			if (nextNeighbor != null) {
-				nextBackboneNode = nextNeighbor;
-				announceConversion();
-			}
+			hypocenter = node.getPosition();
+			convertToBackbone();
 		}
 
 		@Override
@@ -173,15 +199,18 @@ public class EXMacRouting extends NetworkLayer {
 
 		@Override
 		public void convertToBackbone() {
-			
+			nextBackboneNode = (canIGrowMore()) ? (selectNextNeighbor()) : (node);
+			//System.err.println("CHOOSEN ID for #" + node.getId() + ": " + nextBackboneNode.getId());
+			announceConversion(travelDirection);
 		}
 
-		private Node selectNextNeighbor(Position direction) {
+		private Node selectNextNeighbor() {
 			Node selectedNode = null;
+			ensureNeighborhoodInitialization();
 			for (Node neighbor : neighbors) {
-				if (!backboneNeighbors.contains(neighbor.getId()) && isEligible(neighbor.getPosition(), direction)) {
+				if (!backboneNeighbors.contains(neighbor.getId()) && isEligible(neighbor.getPosition())) {
 					if (selectedNode == null 
-							|| isMoreAlignedThan(neighbor.getPosition(), selectedNode.getPosition(), direction)) {
+							|| isMoreAlignedThan(neighbor.getPosition(), selectedNode.getPosition())) {
 						selectedNode = neighbor;
 					}
 				}
@@ -190,36 +219,42 @@ public class EXMacRouting extends NetworkLayer {
 				return selectedNode;
 			}
 
-			return null;
+			return node;
 		}
 		
-		private boolean isEligible(Position pos, Position direction) {
+		private boolean canIGrowMore() {
+			double nodeX = node.getPosition().getXCoord();
+			double nodeY = node.getPosition().getYCoord();
+			double lowerXBound = MAX_X * (1 - backboneBoundaryRatio);
+			double upperXBound = MAX_X * backboneBoundaryRatio;
+			double lowerYBound = MAX_Y * (1 - backboneBoundaryRatio);
+			double upperYBound = MAX_Y * backboneBoundaryRatio;
+			return nodeX > lowerXBound && nodeX < upperXBound && nodeY > lowerYBound && nodeY < upperYBound;
+		}
+		
+		private boolean isEligible(Position pos) {
 			double posX = pos.getXCoord();
 			double posY = pos.getYCoord();
-			double lowerXBound = Configuration.getInstance().getXSize() * (1 - backboneBoundaryRatio);
-			double upperXBound = Configuration.getInstance().getXSize() * backboneBoundaryRatio;
-			double lowerYBound = Configuration.getInstance().getYSize() * (1 - backboneBoundaryRatio);
-			double upperYBound = Configuration.getInstance().getYSize() * backboneBoundaryRatio;
+
 			boolean isFartherFromHypo = node.getPosition().getDistance(hypocenter) < pos.getDistance(hypocenter);
 			boolean isGoingAtCorrectDirection = true;
-			if (direction == LEFT) {
-				isGoingAtCorrectDirection = pos.getXCoord() < hypocenter.getXCoord();
-			} else if (direction == RIGHT) {
-				isGoingAtCorrectDirection = pos.getXCoord() > hypocenter.getXCoord();
-			} else if (direction == UP) {
-				isGoingAtCorrectDirection = pos.getYCoord() < hypocenter.getYCoord();
-			} else if (direction == DOWN) {
-				isGoingAtCorrectDirection = pos.getYCoord() > hypocenter.getYCoord();
+			if (travelDirection.equals(LEFT)) {
+				isGoingAtCorrectDirection = posX < hypocenter.getXCoord();
+			} else if (travelDirection.equals(RIGHT)) {
+				isGoingAtCorrectDirection = posX > hypocenter.getXCoord();
+			} else if (travelDirection.equals(UP)) {
+				isGoingAtCorrectDirection = posY < hypocenter.getYCoord();
+			} else if (travelDirection.equals(DOWN)) {
+				isGoingAtCorrectDirection = posY > hypocenter.getYCoord();
 			}
-			return (posX > lowerXBound && posX < upperXBound && posY > lowerYBound && posY < upperYBound)
-					 && isFartherFromHypo && isGoingAtCorrectDirection;
+			return isFartherFromHypo && isGoingAtCorrectDirection;
 		}
 		
-		private boolean isMoreAlignedThan(Position test, Position reference, Position axis) {
+		private boolean isMoreAlignedThan(Position test, Position reference) {
 			Position testAux;
 			Position refAux;
 			Position hypAux;
-			if (axis.getXCoord() != 0) {
+			if (travelDirection.getXCoord() != 0) {
 				testAux = new Position(0, test.getYCoord());
 				refAux = new Position(0, reference.getYCoord());
 				hypAux = new Position(0, hypocenter.getYCoord());

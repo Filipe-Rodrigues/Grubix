@@ -61,7 +61,7 @@ import br.ufla.dcc.grubix.xml.ConfigurationException;
  * 
  * @author Andreas Kumlehn 
  */
-public abstract class Layer implements Configurable, StateIO, Serializable {
+public abstract class Layer implements Configurable, StateIO {
 	
 	/** Logger of the class Node. */
 	private static final Logger LOGGER = Logger.getLogger(Layer.class);

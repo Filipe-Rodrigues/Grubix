@@ -122,7 +122,7 @@ public final class Simulator {
 					+ seed + ")");
 			
 			// Salva a configuração dos backbones. ÚTIL APENAS AO PROJETO EXMac!!!!
-			BackboneConfigurationManager.getInstance().close(true);
+			BackboneConfigurationManager.close(true);
 			
 			System.err.println("SIMULAÇÃO TERMINADA COM SUCESSO!");
 		} catch (ConfigurationException e) {

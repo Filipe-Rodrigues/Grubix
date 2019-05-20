@@ -26,7 +26,7 @@ import java.util.List;
  * Factory class for NodeIds. Produces NodeId objects starting with ID 1.
  * @author Andreas Kumlehn
  */
-public class NodeId extends UniqueId {
+public class NodeId extends UniqueId implements Serializable {
 
 	/**
 	 * int value of the next free NodeId.
