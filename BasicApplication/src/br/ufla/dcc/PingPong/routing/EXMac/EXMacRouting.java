@@ -18,6 +18,7 @@ import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 import br.ufla.dcc.grubix.simulator.node.NetworkLayer;
 import br.ufla.dcc.grubix.simulator.node.Node;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
+import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.*;
 
 public class EXMacRouting extends NetworkLayer {
 
@@ -31,18 +32,12 @@ public class EXMacRouting extends NetworkLayer {
 	private List<Node> neighbors = null;
 	private List<NodeId> backboneNeighbors = null;
 
-	/** Caso eu seja um nó backbone, este é o meu sucessor na cadeia */
-	private Node nextBackboneNode;
-	
-	/** Posição foco da heurística de formação dos backbones */
-	private Position hypocenter;
-
 	/** Objeto de invocação do gerador de backbones */
 	private EXMacBackboneGenerator generator;
 
 	public EXMacRouting() {
 		backboneNeighbors = new ArrayList<>();
-
+		generator = null;
 	}
 
 	/** Função para obter o nó vizinho mais próximo do destino */
@@ -83,9 +78,11 @@ public class EXMacRouting extends NetworkLayer {
 
 	private void announceConversion(Position direction) {
 		EXMacRoutingControlPacket packet = new EXMacRoutingControlPacket(sender, NodeId.ALLNODES, 
-				direction, hypocenter, (nextBackboneNode == node) ? (null) : (nextBackboneNode.getId()));
-		BackboneConfigurationManager.getInstance().setNextBackboneNode(node.getId(), nextBackboneNode.getId()
-				, direction);
+				direction, generator.hypocenter, (generator.nextBackboneNode == node) 
+				? (null) 
+				: (generator.nextBackboneNode.getId()));
+		BackboneConfigurationManager.getInstance().setNextBackboneNode(node.getId(), 
+				generator.nextBackboneNode.getId(), direction);
 		sendPacket(packet);
 	}
 	
@@ -120,10 +117,10 @@ public class EXMacRouting extends NetworkLayer {
 				backboneNeighbors.add(senderID);
 				BackboneConfigurationManager.getInstance().addBackboneNeighbor(node.getId(), senderID);
 			}
-			if (nextBackboneNode == null) {
+			if (generator.nextBackboneNode == null) {
 				NodeId next = controlPacket.getNextSelectedBackbone();
 				if (next != null && next.equals(node.getId())) {
-					hypocenter = controlPacket.getBackboneLineRoot();
+					generator.hypocenter = controlPacket.getBackboneLineRoot();
 					generator = new HeuristicA(controlPacket.getGrowthDirection());
 					generator.convertToBackbone();
 				}
@@ -141,16 +138,16 @@ public class EXMacRouting extends NetworkLayer {
 	protected void processEvent(StartSimulation start) {
 		super.processEvent(start);
 		if (node.getId().asInt() == 10) {
-			generator = new HeuristicA(EXMacBackboneGenerator.RIGHT);
+			generator = new HeuristicA(RIGHT);
 			generator.startBackbone();
 		} else if (node.getId().asInt() == 11) {
-			generator = new HeuristicA(EXMacBackboneGenerator.DOWN);
+			generator = new HeuristicA(DOWN);
 			generator.startBackbone();
 		} else if (node.getId().asInt() == 12) {
-			generator = new HeuristicA(EXMacBackboneGenerator.LEFT);
+			generator = new HeuristicA(LEFT);
 			generator.startBackbone();
 		} else if (node.getId().asInt() == 13) {
-			generator = new HeuristicA(EXMacBackboneGenerator.UP);
+			generator = new HeuristicA(UP);
 			generator.startBackbone();
 		}
 	}
@@ -160,28 +157,36 @@ public class EXMacRouting extends NetworkLayer {
 		debug.write(sender);
 	}
 
-	private interface EXMacBackboneGenerator {
-		public static final Position LEFT = new Position(-1, 0);
-		public static final Position RIGHT = new Position(1, 0);
-		public static final Position UP = new Position(0, -1);
-		public static final Position DOWN = new Position(0, 1);
+	private abstract class EXMacBackboneGenerator {
 
-		void startBackbone();
+		/** Caso eu seja um nó backbone, este é o meu sucessor na cadeia */
+		protected Node nextBackboneNode;
+		
+		/** Posição foco da heurística de formação dos backbones */
+		protected Position hypocenter;
+		
+		abstract void startBackbone();
 
-		void includeBackboneNeighbor(NodeId newBackboneNeighbor);
+		abstract void includeBackboneNeighbor(NodeId newBackboneNeighbor);
 
-		void convertToBackbone();
+		abstract void convertToBackbone();
 	}
 
-	private class HeuristicA implements EXMacBackboneGenerator {
+	private class HeuristicA extends EXMacBackboneGenerator {
 
-		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
-		private Position travelDirection;
-		
 		/** Acesso rápido às coordenadas máximas do campo */
 		private final double MAX_X = Configuration.getInstance().getXSize();
 		private final double MAX_Y = Configuration.getInstance().getYSize();
 
+		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
+		private Position travelDirection;
+		
+		/** Caso eu seja um nó Backbone, este é meu identificador de segmento */
+		private char label;
+
+		private HeuristicA() {
+		}
+		
 		private HeuristicA(Position travelDirection) {
 			this.travelDirection = travelDirection;
 		}
