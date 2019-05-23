@@ -1,7 +1,9 @@
 package br.ufla.dcc.PingPong.routing.EXMac;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.routing.GeoRoutingPacket;
@@ -58,7 +60,7 @@ public class EXMacRouting extends NetworkLayer {
 		return minDistanceNodeId;
 	}
 
-	private void routePacket(Packet packet) {
+	private void routePacketDirectly(Packet packet) {
 		ensureNeighborhoodInitialization();
 
 		Position destinationPosition = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
@@ -108,7 +110,7 @@ public class EXMacRouting extends NetworkLayer {
 				// Ferramentas de depuração -------------------------
 				debug.print("[Roteamento] Mensagem não é para mim, será enviada para camada abaixo (LLC)", sender);
 				// --------------------------------------------------
-				routePacket(enclosed);
+				routePacketDirectly(enclosed);
 			}
 		} else if (packet instanceof EXMacRoutingControlPacket) {
 			EXMacRoutingControlPacket controlPacket = (EXMacRoutingControlPacket) packet;
@@ -131,7 +133,7 @@ public class EXMacRouting extends NetworkLayer {
 	@Override
 	public void upperSAP(Packet packet) throws LayerException {
 		debug.write(debug.strPkt(packet), sender);
-		routePacket(packet);
+		routePacketDirectly(packet);
 	}
 
 	@Override
@@ -149,6 +151,8 @@ public class EXMacRouting extends NetworkLayer {
 		} else if (node.getId().asInt() == 13) {
 			generator = new HeuristicA(UP);
 			generator.startBackbone();
+		} else {
+			generator = new HeuristicA();
 		}
 	}
 
@@ -159,17 +163,25 @@ public class EXMacRouting extends NetworkLayer {
 
 	private abstract class EXMacBackboneGenerator {
 
+		public static final Position ORIGIN = new Position(0, 0);
+		
 		/** Caso eu seja um nó backbone, este é o meu sucessor na cadeia */
 		protected Node nextBackboneNode;
 		
 		/** Posição foco da heurística de formação dos backbones */
 		protected Position hypocenter;
 		
+		public double computeVectorAngles(Position v1, Position v2) {
+			return ORIGIN.computeAngle(v1, v2);
+		}
+		
 		abstract void startBackbone();
 
 		abstract void includeBackboneNeighbor(NodeId newBackboneNeighbor);
 
 		abstract void convertToBackbone();
+		
+		abstract void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths);
 	}
 
 	private class HeuristicA extends EXMacBackboneGenerator {
@@ -182,7 +194,7 @@ public class EXMacRouting extends NetworkLayer {
 		private Position travelDirection;
 		
 		/** Caso eu seja um nó Backbone, este é meu identificador de segmento */
-		private char label;
+		private byte label;
 
 		private HeuristicA() {
 		}
@@ -206,9 +218,23 @@ public class EXMacRouting extends NetworkLayer {
 		public void convertToBackbone() {
 			nextBackboneNode = (canIGrowMore()) ? (selectNextNeighbor()) : (node);
 			//System.err.println("CHOOSEN ID for #" + node.getId() + ": " + nextBackboneNode.getId());
+			label = getCorrespondingLabel(node.getPosition(), travelDirection);
 			announceConversion(travelDirection);
 		}
 
+		@Override
+		public void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths) {
+			if (amIBackbone()) {
+				
+			} else {
+				
+			}
+		}
+		
+		private boolean amIBackbone() {
+			return nextBackboneNode != null;
+		}
+		
 		private Node selectNextNeighbor() {
 			Node selectedNode = null;
 			ensureNeighborhoodInitialization();
@@ -270,7 +296,93 @@ public class EXMacRouting extends NetworkLayer {
 			}
 			return testAux.getDistance(hypAux) < refAux.getDistance(hypAux);
 		}
-
+		
+		private byte getCorrespondingLabel(Position nodePosition, Position travelDirection) {
+			double nodeX = nodePosition.getXCoord();
+			double nodeY = nodePosition.getYCoord();
+			if (travelDirection.equals(RIGHT)) {
+				if (nodeX < (MAX_X / 3d)) {
+					return 5;
+				} else if (nodeX < 2 * (MAX_X / 3d)) {
+					return 1;
+				} else {
+					return 6;
+				}
+			} else if (travelDirection.equals(DOWN)) {
+				if (nodeY < (MAX_Y / 3d)) {
+					return 7;
+				} else if (nodeY < 2 * (MAX_Y / 3d)) {
+					return 1;
+				} else {
+					return 8;
+				}
+			} else if (travelDirection.equals(LEFT)) {
+				if (nodeX < (MAX_X / 3d)) {
+					return 10;
+				} else if (nodeX < 2 * (MAX_X / 3d)) {
+					return 3;
+				} else {
+					return 9;
+				}
+			} else if (travelDirection.equals(UP)) {
+				if (nodeY < (MAX_Y / 3d)) {
+					return 12;
+				} else if (nodeY < 2 * (MAX_Y / 3d)) {
+					return 4;
+				} else {
+					return 11;
+				}
+			}
+			return -1;
+		}
+		
+		private Position getDirectionOfBackboneFromMe(byte backboneRegionLabel) {
+			if (backboneRegionLabel == 5 || backboneRegionLabel == 1 || backboneRegionLabel == 6) {
+				if (node.getPosition().getYCoord() < (MAX_Y / 3d)) {
+					return DOWN;
+				}
+				return UP;
+			} else if (backboneRegionLabel == 7 || backboneRegionLabel == 2 || backboneRegionLabel == 8) {
+				if (node.getPosition().getXCoord() < 2 * (MAX_X / 3d)) {
+					return RIGHT;
+				}
+				return LEFT;
+			} else if (backboneRegionLabel == 9 || backboneRegionLabel == 3 || backboneRegionLabel == 10) {
+				if (node.getPosition().getYCoord() < 2 * (MAX_Y / 3d)) {
+					return DOWN;
+				}
+				return UP;
+			} else if (backboneRegionLabel == 11 || backboneRegionLabel == 4 || backboneRegionLabel == 12) {
+				if (node.getPosition().getXCoord() < (MAX_X / 3d)) {
+					return RIGHT;
+				}
+				return LEFT;
+			}
+			
+			return null;
+		}
+		
+		private boolean isDeadEndSource(byte label) {
+			return (label == 6 || label == 8 || label == 10 
+					|| label == 12 || label < 1 || label > 12);
+		}
+		
+		private boolean isDeadEndTarget(byte label) {
+			return (label == 5 || label == 7 || label == 9 
+					|| label == 11 || label < 1 || label > 12);
+		}
+		
+		private double getHopDistanceFromBackbone(Position growthDirection) {
+			return 0;
+		}
+		
+		private List<Pair<Double, Position>> getOrderedBackboneList() {
+			List<Pair<Double, Position>> backbones = new ArrayList<Pair<Double,Position>>();
+			
+			Collections.sort(backbones);
+			return backbones;
+		}
+		
 	}
 
 }
