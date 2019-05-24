@@ -82,19 +82,19 @@ public class EXMacRandomStartPositions extends br.ufla.dcc.grubix.simulator.move
 		if (node.getId().asInt() == 10 && forceCenterNodes) {
 			// O nó de ID 10 estará fixado no canto superior esquerdo, dirigindo
 			// o backbone para a direita:
-			return new Position(xSize/10d, ySize/3d);
+			return new Position(xSize/20d, ySize/3d);
 		} else if (node.getId().asInt() == 11 && forceCenterNodes) {
 			// O nó de ID 11 estará fixado no canto superior direito, dirigindo
 			// o backbone para baixo:
-			return new Position(2d*xSize/3d, ySize/10d);
+			return new Position(2d*xSize/3d, ySize/20d);
 		} else if (node.getId().asInt() == 12 && forceCenterNodes) {
 			// O nó de ID 12 estará fixado no canto inferior direito, dirigindo
 			// o backbone para a esquerda:
-			return new Position(9d*xSize/10d, 2d*ySize/3d);
+			return new Position(19d*xSize/20d, 2d*ySize/3d);
 		} else if (node.getId().asInt() == 13 && forceCenterNodes) {
 			// O nó de ID 13 estará fixado no canto inferior esquerdo, dirigindo
 			// o backbone para cima:
-			return new Position(xSize/3d, 9d*ySize/10d);
+			return new Position(xSize/3d, 19d*ySize/20d);
 		} else if (node.getId().asInt() == 1 || node.getId().asInt() == 2) {
 			return generateFixedPosition(node.getId().asInt());
 		} else {

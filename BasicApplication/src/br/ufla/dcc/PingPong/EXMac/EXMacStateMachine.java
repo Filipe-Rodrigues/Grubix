@@ -505,8 +505,12 @@ public class EXMacStateMachine  {
      */ 
     public boolean changeStateRTSreceived(EXMacStateType oldState) {
     	boolean changeState;
+
 		/* Se recebeu uma mensagem RTS durante o CS. RTS é a o único tipo de mensagem que importa aqui  */
-		if (xState.getRecPkt().getReceiver() == this.address.getId()){
+		if (xState.getRecPkt().getReceiver().equals(this.address.getId())){
+			if (this.address.getId().asInt() == 68) {
+	    		System.out.println("RECEBI RTS CERTO");
+	    	}
 	    	// Vai avisar a XMac que tem um pacote CTS a ser enviado em seguida
 	        changeState = setNewState(EXMacStateType.SENDING_CTS, xConf.stepsDelayTx(PacketType.CTS), EXMacActionType.MSG_DOWN);
 	        if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED unicast" );
@@ -522,6 +526,10 @@ public class EXMacStateMachine  {
 	    	if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED broadcast" );
 	    }
 	    else {
+	    	if (this.address.getId().asInt() == 68) {
+	    		System.out.println("WTF????????");
+	    		System.out.println("RECEIVER: " + xState.getRecPkt().getReceiver());
+	    	}
 	    	/* RTS não é para este nó  */
 	    	changeState = goToSleep(EXMacActionType.TURN_OFF);
 	    	if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED para outro nó" );

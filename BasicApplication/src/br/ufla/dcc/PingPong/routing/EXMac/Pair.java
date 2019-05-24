@@ -1,6 +1,6 @@
 package br.ufla.dcc.PingPong.routing.EXMac;
 
-public class Pair<L extends Comparable<L>, R> implements Comparable<Pair<L, R>> {
+public class Pair<L, R> {
 
 	private L left;
 	private R right;
@@ -32,8 +32,28 @@ public class Pair<L extends Comparable<L>, R> implements Comparable<Pair<L, R>> 
 	}
 
 	@Override
-	public int compareTo(Pair<L, R> other) {
-		return this.left.compareTo(other.left);
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((left == null) ? 0 : left.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Pair other = (Pair) obj;
+		if (left == null) {
+			if (other.left != null)
+				return false;
+		} else if (!left.equals(other.left))
+			return false;
+		return true;
 	}
 
 }

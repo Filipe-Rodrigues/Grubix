@@ -116,18 +116,16 @@ public class BackboneConfigurationManager implements Serializable {
 		allNodesConfigurations.get(myId).backboneNeighbors.add(neighborId);
 	}
 	
-	private class BackboneConfiguration implements Serializable {
-		
-		private static final long serialVersionUID = 1L;
-		
-		NodeId nextBackboneNode;
-		Position direction;
-		List<NodeId> backboneNeighbors;
-		
-		public BackboneConfiguration() {
-			nextBackboneNode = null;
-			backboneNeighbors = new ArrayList<NodeId>();
-		}
+	public void setBackboneNodeLabel(NodeId myId, byte label) {
+		ensureNodeRegistration(myId);
+		allNodesConfigurations.get(myId).label = label;
 	}
 	
+	public byte getBackboneNodeLabel(NodeId myId) {
+		if (amIBackbone(myId)) {
+			return allNodesConfigurations.get(myId).label;
+		}
+		return -1;
+	}
+
 }

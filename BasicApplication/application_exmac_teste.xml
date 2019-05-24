@@ -76,7 +76,7 @@
         <generator>
             <!-- Define a posição dos nós informados baseado nos parametros -->
             <!--<class>br.ufla.dcc.PingPong.PaxMac.PaxRandomStartPositions</class>-->
-            <class>br.ufla.dcc.grubix.simulator.movement.FromFileStartPositions</class>
+            <class>br.ufla.dcc.PingPong.movement.FromConfigStartPositions</class>
             <!--<class>br.ufla.dcc.PingPong.movement.EXMacRandomStartPositions</class>-->
             <!--<class>br.ufla.dcc.grubix.simulator.movement.GridPositionGenerator</class>-->
             <params>
@@ -88,9 +88,9 @@
                 <!--<param name="forceCenterNodes">true</param>-->
             </params>
         </generator>
-        <targetfile>startpositions2.xml</targetfile>
+        <targetfile>startpositions.xml</targetfile>
     </generated>
 </positions>
 <!--Tempo total de simulaÃ§Ã£o = stepspersecond * seconds-->
-<simulationtime stepspersecond="10000" base="seconds">5</simulationtime>
+<simulationtime stepspersecond="10000" base="seconds">10</simulationtime>
 </configuration>

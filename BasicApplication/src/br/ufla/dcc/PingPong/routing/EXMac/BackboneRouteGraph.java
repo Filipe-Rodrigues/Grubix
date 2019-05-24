@@ -13,11 +13,11 @@ public class BackboneRouteGraph {
 	private static final byte INFINITE = Byte.MAX_VALUE;
 	private static Map<String, BackboneRouteGraph> instances = new HashMap<String, BackboneRouteGraph>();
 
-	byte[][] adjacencyMatrix;
-	byte vertexCount;
-	byte edgeCount;
-	boolean directed;
-	boolean startsOnZero;
+	private byte[][] adjacencyMatrix;
+	private byte vertexCount;
+	private byte edgeCount;
+	private boolean directed;
+	private boolean startsOnZero;
 
 	public static BackboneRouteGraph getInstance(String key) {
 		if (!instances.containsKey(key)) {
@@ -94,11 +94,11 @@ public class BackboneRouteGraph {
 		queue.add((byte) ((startsOnZero) ? (currentIndex) : (currentIndex + 1)));
 	}
 
-	public Pair<Integer, Queue<Byte>> getshortestPath(int source, int target) {
+	public Entry<Integer, Queue<Byte>> getshortestPath(int source, int target) {
 		return getshortestPath((byte) source, (byte) target);
 	}
 	
-	public Pair<Integer, Queue<Byte>> getshortestPath(byte source, byte target) {
+	public Entry<Integer, Queue<Byte>> getshortestPath(byte source, byte target) {
 		boolean[] shortestPathTree = new boolean[vertexCount];
 		byte[] distances = new byte[vertexCount];
 		byte[] parents = new byte[vertexCount];
@@ -129,7 +129,7 @@ public class BackboneRouteGraph {
 		}
 		Queue<Byte> path = new LinkedList<Byte>();
 		fillPathQueue(path, parents, target);
-		Pair<Integer, Queue<Byte>> shortestPathToTarget = new Pair<Integer, Queue<Byte>>
+		Entry<Integer, Queue<Byte>> shortestPathToTarget = new Entry<Integer, Queue<Byte>>
 		((int) distances[target], path);
 		//printDijkstra(source, distances, parents);
 		return shortestPathToTarget;

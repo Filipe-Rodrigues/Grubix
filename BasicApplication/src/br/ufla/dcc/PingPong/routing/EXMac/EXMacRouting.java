@@ -1,13 +1,18 @@
 package br.ufla.dcc.PingPong.routing.EXMac;
 
+import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.DOWN;
+import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.LEFT;
+import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.RIGHT;
+import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.UP;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
-
 import br.ufla.dcc.PingPong.ToolsDebug;
+import br.ufla.dcc.PingPong.ToolsMiscellaneous;
+import br.ufla.dcc.PingPong.movement.FromConfigStartPositions;
 import br.ufla.dcc.PingPong.routing.GeoRoutingPacket;
-import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.LayerException;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.Position;
@@ -17,17 +22,17 @@ import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
+import br.ufla.dcc.grubix.simulator.movement.FromFileStartPositions;
 import br.ufla.dcc.grubix.simulator.node.NetworkLayer;
 import br.ufla.dcc.grubix.simulator.node.Node;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
-import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.*;
 
 public class EXMacRouting extends NetworkLayer {
 
 	/** Objeto para a depuração */
 	ToolsDebug debug = ToolsDebug.getInstance();
 
-	@ShoXParameter(description = "Porção máxima do campo em que os backbones poderão se propagar. 1 = 100% do campo.", defaultValue = "0.95d")
+	@ShoXParameter(description = "Porção máxima do campo em que os backbones poderão se propagar. 1 = 100% do campo.", defaultValue = "0.96d")
 	private double backboneBoundaryRatio;
 
 	/** Lista de nós vizinhos */
@@ -69,8 +74,6 @@ public class EXMacRouting extends NetworkLayer {
 		NodeId closestId = getMinDistanceNodeId(destinationPosition);
 		if (closestId == null) {
 			System.err.println(this.id + " >>>> BURACO ENCONTRADO, SAINDO DA APLICAÇÃO!!!");
-			SingletonTestResult.getInstance().setEndingTime(-1);
-			SingletonTestResult.getInstance().printAllStats();
 			System.exit(1);
 		}
 		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);
@@ -79,6 +82,7 @@ public class EXMacRouting extends NetworkLayer {
 	}
 
 	private void announceConversion(Position direction) {
+		
 		EXMacRoutingControlPacket packet = new EXMacRoutingControlPacket(sender, NodeId.ALLNODES, 
 				direction, generator.hypocenter, (generator.nextBackboneNode == node) 
 				? (null) 
@@ -91,6 +95,13 @@ public class EXMacRouting extends NetworkLayer {
 	private void ensureNeighborhoodInitialization() {
 		if (this.neighbors == null) {
 			this.neighbors = node.getNeighbors();
+		}
+	}
+	
+	private void ensureNextBackboneNodeRegistration() {
+		NodeId nextBBNode = BackboneConfigurationManager.getInstance().getNextBackboneNode(node.getId());
+		if (nextBBNode != null) {
+			generator.nextBackboneNode = SimulationManager.getInstance().queryNodeById(nextBBNode);
 		}
 	}
 	
@@ -119,13 +130,22 @@ public class EXMacRouting extends NetworkLayer {
 				backboneNeighbors.add(senderID);
 				BackboneConfigurationManager.getInstance().addBackboneNeighbor(node.getId(), senderID);
 			}
+			ensureNextBackboneNodeRegistration();
 			if (generator.nextBackboneNode == null) {
 				NodeId next = controlPacket.getNextSelectedBackbone();
 				if (next != null && next.equals(node.getId())) {
-					generator.hypocenter = controlPacket.getBackboneLineRoot();
 					generator = new HeuristicA(controlPacket.getGrowthDirection());
+					generator.hypocenter = controlPacket.getBackboneLineRoot();
 					generator.convertToBackbone();
 				}
+			}
+		} else if (packet instanceof EXMacRoutingPacket) {
+			EXMacRoutingPacket exmacPacket = (EXMacRoutingPacket) packet;
+			Packet enclosed = exmacPacket.getEnclosedPacket();
+			if (enclosed.getReceiver().equals(getId())) {
+				sendPacket(enclosed);
+			} else {
+				generator.routePacketUsingBackbone(enclosed, exmacPacket.getBackboneSegmentPath());
 			}
 		}
 	}
@@ -133,26 +153,30 @@ public class EXMacRouting extends NetworkLayer {
 	@Override
 	public void upperSAP(Packet packet) throws LayerException {
 		debug.write(debug.strPkt(packet), sender);
-		routePacketDirectly(packet);
+		generator.chooseRoutingMode(packet);
 	}
 
 	@Override
 	protected void processEvent(StartSimulation start) {
 		super.processEvent(start);
-		if (node.getId().asInt() == 10) {
-			generator = new HeuristicA(RIGHT);
-			generator.startBackbone();
-		} else if (node.getId().asInt() == 11) {
-			generator = new HeuristicA(DOWN);
-			generator.startBackbone();
-		} else if (node.getId().asInt() == 12) {
-			generator = new HeuristicA(LEFT);
-			generator.startBackbone();
-		} else if (node.getId().asInt() == 13) {
-			generator = new HeuristicA(UP);
-			generator.startBackbone();
+		if (Configuration.getInstance().getPositionGenerator() instanceof FromConfigStartPositions) {
+			generator = new HeuristicA(null);
 		} else {
-			generator = new HeuristicA();
+			if (node.getId().asInt() == 10) {
+				generator = new HeuristicA(RIGHT);
+				generator.startBackbone();
+			} else if (node.getId().asInt() == 11) {
+				generator = new HeuristicA(DOWN);
+				generator.startBackbone();
+			} else if (node.getId().asInt() == 12) {
+				generator = new HeuristicA(LEFT);
+				generator.startBackbone();
+			} else if (node.getId().asInt() == 13) {
+				generator = new HeuristicA(UP);
+				generator.startBackbone();
+			} else {
+				generator = new HeuristicA();
+			}
 		}
 	}
 
@@ -163,7 +187,7 @@ public class EXMacRouting extends NetworkLayer {
 
 	private abstract class EXMacBackboneGenerator {
 
-		public static final Position ORIGIN = new Position(0, 0);
+		public final Position ORIGIN = new Position(0, 0);
 		
 		/** Caso eu seja um nó backbone, este é o meu sucessor na cadeia */
 		protected Node nextBackboneNode;
@@ -175,11 +199,22 @@ public class EXMacRouting extends NetworkLayer {
 			return ORIGIN.computeAngle(v1, v2);
 		}
 		
+		public Position getVectorFromPositions(Position a, Position b) {
+			return new Position(b.getXCoord() - a.getXCoord(), b.getYCoord() - a.getYCoord());
+		}
+		
+		public Double getScalarProjection(Position v1, Position v2) {
+			return (v1.getXCoord() * v2.getXCoord() + v1.getYCoord() * v2.getYCoord())
+					/ Math.sqrt(Math.pow(v2.getXCoord(), 2) + Math.pow(v2.getYCoord(), 2));
+		}
+		
 		abstract void startBackbone();
 
 		abstract void includeBackboneNeighbor(NodeId newBackboneNeighbor);
 
 		abstract void convertToBackbone();
+		
+		abstract void chooseRoutingMode(Packet packet);
 		
 		abstract void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths);
 	}
@@ -189,6 +224,7 @@ public class EXMacRouting extends NetworkLayer {
 		/** Acesso rápido às coordenadas máximas do campo */
 		private final double MAX_X = Configuration.getInstance().getXSize();
 		private final double MAX_Y = Configuration.getInstance().getYSize();
+		private final double MEAN_HOP_DISTANCE = 34.52d;
 
 		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
 		private Position travelDirection;
@@ -200,7 +236,14 @@ public class EXMacRouting extends NetworkLayer {
 		}
 		
 		private HeuristicA(Position travelDirection) {
-			this.travelDirection = travelDirection;
+			if (travelDirection != null) {
+				this.travelDirection = travelDirection;
+			} else {
+				NodeId myId = node.getId();
+				label = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(myId);
+				backboneNeighbors = BackboneConfigurationManager.getInstance().loadBackboneNeighbors(myId);
+				this.travelDirection = BackboneConfigurationManager.getInstance().getBackboneDirection(myId);
+			}
 		}
 		
 		@Override
@@ -219,19 +262,133 @@ public class EXMacRouting extends NetworkLayer {
 			nextBackboneNode = (canIGrowMore()) ? (selectNextNeighbor()) : (node);
 			//System.err.println("CHOOSEN ID for #" + node.getId() + ": " + nextBackboneNode.getId());
 			label = getCorrespondingLabel(node.getPosition(), travelDirection);
+			BackboneConfigurationManager.getInstance().setBackboneNodeLabel(node.getId(), label);
 			announceConversion(travelDirection);
+		}
+		
+		@Override
+		public void chooseRoutingMode(Packet packet) {
+			Position source = node.getPosition();
+			Position target = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
+					.getPosition();
+			List<Entry<Double, Position>> backboneChains = getOrderedBackboneList(source);
+			Position stDirection = getVectorFromPositions(source, target);
+			Position backboneDirectionSource;
+			byte sourceBBSegment;
+			int count = 0;
+			do {
+				backboneDirectionSource = backboneChains.get(count++).getRight();
+				sourceBBSegment = getCorrespondingLabel(source, backboneDirectionSource);
+			} while (!isDirectionViable(stDirection, backboneDirectionSource, sourceBBSegment));
+			
+			backboneChains = getOrderedBackboneList(target);
+			Position backboneDirectionTarget;
+			byte targetBBSegment;
+			count = 0;
+			do {
+				backboneDirectionTarget = backboneChains.get(count++).getRight();
+				targetBBSegment = getCorrespondingLabel(target, backboneDirectionTarget);
+			} while (isDeadEndTarget(targetBBSegment));
+			
+			Entry<Integer, Queue<Byte>> shortestPath = BackboneRouteGraph.getInstance("heuristicA.cfg")
+					.getshortestPath(sourceBBSegment, targetBBSegment);
+			//System.err.println(sourceBBSegment + " ==> " + targetBBSegment);
+			double backbonedDist = getHopDistanceFromBackbone(source, backboneDirectionSource)
+					+ getHopDistanceFromBackbone(target, backboneDirectionTarget)
+					+ shortestPath.getLeft();
+			double directDist = getDirectHopDistance(node.getPosition(), target);
+			System.err.println("BB DIST: " + backbonedDist);
+			System.err.println("DIR DIST: " + directDist);
+			if (directDist <= backbonedDist) {
+				routePacketDirectly(packet);
+			} else {
+				routePacketUsingBackbone(packet, shortestPath.getRight());
+			}
 		}
 
 		@Override
 		public void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths) {
-			if (amIBackbone()) {
-				
+			ensureNextBackboneNodeRegistration();
+			ensureNeighborhoodInitialization();
+			if (!intermediatePaths.isEmpty()) {
+				byte backboneSegment = intermediatePaths.peek();
+				boolean sentMessage = false;
+				if (amIBackbone()) {
+					NodeId nextBBNode = nextBackboneNode.getId();
+					byte neighLabel = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(nextBBNode);
+					if (neighLabel == backboneSegment) {
+						intermediatePaths.poll();
+						sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
+						sentMessage = true;
+					}
+				}
+				if (!sentMessage && !backboneNeighbors.isEmpty()) {
+					for (NodeId neighbor : backboneNeighbors) {
+						byte neighLabel = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(neighbor);
+						if (neighLabel == backboneSegment) {
+							System.err.println("FOUND BACKBONE BRANCH: ");
+							intermediatePaths.poll();
+							sendEXMacRoutingPacket(packet, neighbor, intermediatePaths);
+							sentMessage = true;
+							break;
+						}
+					}
+				}
+				if (!sentMessage) {
+					if (!amIBackbone()) {
+						Position source = node.getPosition();
+						Position direction = getDirectionOfBackboneFromReference(source, backboneSegment);
+						NodeId closestNeighbor = null;
+						double maxDistance = 0;
+						for (Node neighbor : neighbors) {
+							Position neighPos = neighbor.getPosition();
+							double scalarProj = getScalarProjection(getVectorFromPositions(source, neighPos), direction);
+							if (scalarProj > maxDistance) {
+								maxDistance = scalarProj;
+								closestNeighbor = neighbor.getId();
+							}
+						}
+						if (closestNeighbor != null) {
+							sendEXMacRoutingPacket(packet, closestNeighbor, intermediatePaths);
+						} else {
+							System.err.println(id + " >>>> BURACO ENCONTRADO, SAINDO DA APLICAÇÃO!!!");
+							System.exit(1);
+						}
+					} else {
+						NodeId nextBBNode = nextBackboneNode.getId();
+						if (nextBBNode.equals(node.getId())) {
+							System.err.println("MESSAGE LEAKAGE, SOLVE THIS PROBLEM!!!!");
+						} else {
+							sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
+						}
+					}
+				}
 			} else {
-				
+				if (amIBackbone()) {
+					Position source = node.getPosition();
+					Position nextBBPosition = nextBackboneNode.getPosition();
+					Position destination = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
+							.getPosition();
+					if (source.getDistance(destination) < nextBBPosition.getDistance(destination)) {
+						routePacketDirectly(packet);
+					} else {
+						NodeId nextBBNode = nextBackboneNode.getId();
+						EXMacRoutingPacket exmacPacket = new EXMacRoutingPacket(sender, nextBBNode, packet, intermediatePaths);
+						sendPacket(exmacPacket);
+					}
+				} else {
+					routePacketDirectly(packet);
+				}
 			}
 		}
 		
+		private void sendEXMacRoutingPacket(Packet packet, NodeId destination, Queue<Byte> intermediatePath) {
+			EXMacRoutingPacket exmacPacket = new EXMacRoutingPacket(sender, destination, packet, intermediatePath);
+			sendPacket(exmacPacket);
+		}
+		
 		private boolean amIBackbone() {
+			ensureNextBackboneNodeRegistration();
 			return nextBackboneNode != null;
 		}
 		
@@ -312,7 +469,7 @@ public class EXMacRouting extends NetworkLayer {
 				if (nodeY < (MAX_Y / 3d)) {
 					return 7;
 				} else if (nodeY < 2 * (MAX_Y / 3d)) {
-					return 1;
+					return 2;
 				} else {
 					return 8;
 				}
@@ -336,24 +493,36 @@ public class EXMacRouting extends NetworkLayer {
 			return -1;
 		}
 		
-		private Position getDirectionOfBackboneFromMe(byte backboneRegionLabel) {
+		private Position getDirectionFromLabel(byte label) {
+			if (label == 5 || label == 1 || label == 6) {
+				return RIGHT;
+			} else if (label == 7 || label == 2 || label == 8) {
+				return DOWN;
+			} else if (label == 9 || label == 3 || label == 10) {
+				return LEFT;
+			} else {
+				return UP;
+			}
+		}
+		
+		private Position getDirectionOfBackboneFromReference(Position test, byte backboneRegionLabel) {
 			if (backboneRegionLabel == 5 || backboneRegionLabel == 1 || backboneRegionLabel == 6) {
-				if (node.getPosition().getYCoord() < (MAX_Y / 3d)) {
+				if (test.getYCoord() < (MAX_Y / 3d)) {
 					return DOWN;
 				}
 				return UP;
 			} else if (backboneRegionLabel == 7 || backboneRegionLabel == 2 || backboneRegionLabel == 8) {
-				if (node.getPosition().getXCoord() < 2 * (MAX_X / 3d)) {
+				if (test.getXCoord() < 2 * (MAX_X / 3d)) {
 					return RIGHT;
 				}
 				return LEFT;
 			} else if (backboneRegionLabel == 9 || backboneRegionLabel == 3 || backboneRegionLabel == 10) {
-				if (node.getPosition().getYCoord() < 2 * (MAX_Y / 3d)) {
+				if (test.getYCoord() < 2 * (MAX_Y / 3d)) {
 					return DOWN;
 				}
 				return UP;
 			} else if (backboneRegionLabel == 11 || backboneRegionLabel == 4 || backboneRegionLabel == 12) {
-				if (node.getPosition().getXCoord() < (MAX_X / 3d)) {
+				if (test.getXCoord() < (MAX_X / 3d)) {
 					return RIGHT;
 				}
 				return LEFT;
@@ -372,15 +541,44 @@ public class EXMacRouting extends NetworkLayer {
 					|| label == 11 || label < 1 || label > 12);
 		}
 		
-		private double getHopDistanceFromBackbone(Position growthDirection) {
-			return 0;
+		private double getHopDistanceFromBackbone(Position test, Position travelDirection) {
+			double distance;
+			if (travelDirection.equals(RIGHT)) {
+				distance = Math.abs(test.getYCoord() - (MAX_Y / 3d)) / MEAN_HOP_DISTANCE;
+			} else if (travelDirection.equals(DOWN)) {
+				distance = Math.abs(test.getXCoord() - 2 * (MAX_X / 3d)) / MEAN_HOP_DISTANCE;
+			} else if (travelDirection.equals(LEFT)) {
+				distance = Math.abs(test.getYCoord() - 2 * (MAX_Y / 3d)) / MEAN_HOP_DISTANCE;
+			} else {
+				distance = Math.abs(test.getXCoord() - (MAX_X / 3d)) / MEAN_HOP_DISTANCE;
+			}
+			return distance;
 		}
 		
-		private List<Pair<Double, Position>> getOrderedBackboneList() {
-			List<Pair<Double, Position>> backbones = new ArrayList<Pair<Double,Position>>();
-			
+		private double getDirectHopDistance(Position source, Position target) {
+			return source.getDistance(target) / MEAN_HOP_DISTANCE;
+		}
+		
+		private List<Entry<Double, Position>> getOrderedBackboneList(Position test) {
+			List<Entry<Double, Position>> backbones = new ArrayList<Entry<Double,Position>>();
+			backbones.add(new Entry<Double, Position>(
+					getHopDistanceFromBackbone(test, RIGHT), RIGHT));
+			backbones.add(new Entry<Double, Position>(
+					getHopDistanceFromBackbone(test, DOWN), DOWN));
+			backbones.add(new Entry<Double, Position>(
+					getHopDistanceFromBackbone(test, LEFT), LEFT));
+			backbones.add(new Entry<Double, Position>(
+					getHopDistanceFromBackbone(test, UP), UP));
 			Collections.sort(backbones);
 			return backbones;
+		}
+		
+		private boolean isDirectionViable(Position vectorST, Position travelDir, byte label) {
+			if (!isDeadEndSource(label)) {
+				return true;
+			}
+			double angle = computeVectorAngles(vectorST, travelDir);
+			return (angle < Math.PI / 2d || angle > 3d * Math.PI / 2d);
 		}
 		
 	}

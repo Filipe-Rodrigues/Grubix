@@ -131,6 +131,9 @@ public class EXMac extends MACLayer {
     protected void processEvent(StartSimulation start) {
     	// Define o novo estado e duração, e incrementa a sequência de estado
     	xStateMachine.changeStateBootNode();
+    	if (BackboneConfigurationManager.getInstance().amIBackbone(node.getId())) {
+    		switchToBackbone();
+    	}
     	createtWucTimeOut();
     	//testBackbone();
     }

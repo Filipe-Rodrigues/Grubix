@@ -28,6 +28,7 @@ import org.apache.log4j.PropertyConfigurator;
 import br.ufla.dcc.grubix.debug.compactlogging.ShoxLogger;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.SimulationFailedException;
+import br.ufla.dcc.grubix.simulator.movement.FromFileStartPositions;
 import br.ufla.dcc.grubix.simulator.node.Node;
 import br.ufla.dcc.grubix.xml.ConfigurationException;
 
@@ -68,7 +69,7 @@ public final class Simulator {
 			}
 
 			Configuration configuration = Configuration.readConfig(args[0]);
-
+			
 			ShoxLogger writer = null;
 
 			if (configuration.isLogging()) {
@@ -91,7 +92,7 @@ public final class Simulator {
 			// create empty map to fill later because NodeGenerator needs a
 			// SimulationManager reference to be able
 			// to create AirModules for Nodes.
-			SortedMap<NodeId, Node> allNodes = getNodes(false);
+			SortedMap<NodeId, Node> allNodes = getNodes(configuration.getPositionGenerator() instanceof FromFileStartPositions);
 			// get SimulationManager
 
 			SimulationManager sim = new SimulationManager(writer, allNodes);
@@ -132,13 +133,6 @@ public final class Simulator {
 	}
 	
 	private static SortedMap<NodeId, Node> getNodes(boolean loadedFromFile) {
-		if (loadedFromFile) {
-			try {
-				SortedMap<NodeId, Node> allNodes;
-			} catch(Exception e) {
-				e.printStackTrace();
-			}
-		}
 		return new TreeMap<NodeId, Node>();
 	}
 	
