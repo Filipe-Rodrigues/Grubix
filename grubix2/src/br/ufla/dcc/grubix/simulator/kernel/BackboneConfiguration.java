@@ -15,6 +15,7 @@ public class BackboneConfiguration implements Serializable {
 	public Position direction;
 	public List<NodeId> backboneNeighbors;
 	public byte label;
+	public double cycleStart;
 	
 	public BackboneConfiguration() {
 		nextBackboneNode = null;

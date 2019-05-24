@@ -23,6 +23,7 @@ import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.Direction;
 import br.ufla.dcc.grubix.simulator.event.CrossLayerEvent;
 import br.ufla.dcc.grubix.simulator.event.LogLinkPacket;
+import br.ufla.dcc.grubix.simulator.event.MACPacket;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
 import br.ufla.dcc.grubix.simulator.event.Packet;
 import br.ufla.dcc.grubix.simulator.event.SendingTerminated;
@@ -30,6 +31,7 @@ import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
 import br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
+import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 import br.ufla.dcc.grubix.simulator.node.Link;
 import br.ufla.dcc.grubix.simulator.node.MACLayer;
 import br.ufla.dcc.grubix.simulator.node.MACState;
@@ -133,21 +135,15 @@ public class EXMac extends MACLayer {
     	xStateMachine.changeStateBootNode();
     	if (BackboneConfigurationManager.getInstance().amIBackbone(node.getId())) {
     		switchToBackbone();
+    		xConf.setCycleSyncTiming(BackboneConfigurationManager.getInstance().getNodeCycleSyncTiming(node.getId()));
     	}
     	createtWucTimeOut();
     	//testBackbone();
     }
     
-    private void testBackbone() {
-    	if ((node.getId().asInt() - 1) % 11 == 0) {
-    		switchToBackbone();
-    	}
-    }
-    
     private boolean switchToBackbone() {
     	if (!xConf.isBackboneNode()) {
     		xConf.setBackboneState(true);
-    		//BackboneConfigurationManager.getInstance().setBackboneState(node.getId(), true);
         	misc.vGrubix(node.getId(), "Backbone", "DARK_BLUE");
         	return true;
     	}
@@ -162,7 +158,7 @@ public class EXMac extends MACLayer {
      *  --> CrossLayerEvent = eventos emitidos pela Physical Layer para a MAC, com informações do rádio.
      */
     public final void processWakeUpCall(WakeUpCall wuc) {
-
+    	
     	EXMacEventType event = EXMacEventType.VOID;
     	// Tratamento de evento de fim de marcação de tempo
         if (wuc instanceof EXMacWucTimeOut) {
@@ -175,6 +171,11 @@ public class EXMac extends MACLayer {
     		}
         	//xState.setEvent(XMacEventType.TIME_OUT);
     		event = EXMacEventType.TIME_OUT;
+    		if (xState.getState().equals(EXMacState.EXMacStateType.SLEEP) &&
+    				node.getId().asInt() == 11 || node.getId().asInt() == 789 || node.getId().asInt() == 381 || node.getId().asInt() == 1295) {
+        		double time = SimulationManager.getInstance().getCurrentTime();
+        		System.err.println("Node #" + node.getId() + " woke up: " + (time) + " // RATIO: " + xConf.getCycleSyncTimingRatio());
+        	}
         }
         
         // Tratamento dos eventos emitidos pela PHY.
@@ -237,7 +238,7 @@ public class EXMac extends MACLayer {
 	*/
 	public final void upperSAP(Packet llPacket) {
 		
-		if (this.node.getId().asInt() == 10)  { 
+		if (this.node.getId().asInt() == -1)  { 
 			System.out.println("\n  +  Este é o EX-MAC 2019  +\n");
 			xConf.imprimeParametros();
 		}
@@ -253,6 +254,10 @@ public class EXMac extends MACLayer {
 		if (llPacket.getEnclosedPacket() instanceof EXMacRoutingControlPacket) {
 			//System.err.println("FOI");
 			switchToBackbone();
+			if (xConf.getCycleSyncTimingRatio() < 0) {
+				xConf.setCycleSyncTiming(0);
+				BackboneConfigurationManager.getInstance().setNodeCycleSyncTiming(node.getId(), 0);
+			}
 		}
 
 		startSendDataProcess(llPacket);
@@ -276,6 +281,16 @@ public class EXMac extends MACLayer {
         // Ignorar caso a mensagem foi gerada pelo próprio nó
         if (packet.getSender().getId() == getNode().getId()) 
         	return;
+        
+        if (packet instanceof EXMacBackbonePacket) {
+        	EXMacBackbonePacket bbPacket = (EXMacBackbonePacket) packet;
+        	NodeId nextBB = bbPacket.getNextBackboneTarget();
+        	if (node.getId().equals(nextBB)) {
+        		double cycleShiftRatio = bbPacket.getParentBackboneCycleShiftRatio();
+            	xConf.updateCycleSyncTiming(cycleShiftRatio);
+            	BackboneConfigurationManager.getInstance().setNodeCycleSyncTiming(node.getId(), cycleShiftRatio);
+        	} 
+        }
 
         EXMacPacket xPack = (EXMacPacket)packet;
         xState.setRecPkt(xPack);
@@ -515,7 +530,14 @@ public class EXMac extends MACLayer {
     
     /** Função para criar pacotes do tipo DATA */
     private EXMacPacket createDataPacket(LogLinkPacket packet, boolean ACKreq) {
-        EXMacPacket newPacket = new EXMacPacket(this.sender, packet, ACKreq) ;
+        EXMacPacket newPacket;
+        
+        if (BackboneConfigurationManager.getInstance().amIBackbone(node.getId())) {
+        	NodeId nextBB = BackboneConfigurationManager.getInstance().getNextBackboneNode(node.getId());
+        	newPacket = new EXMacBackbonePacket(this.sender, packet, ACKreq, nextBB, xConf.getCycleSyncTimingRatio());
+        } else {
+        	newPacket = new EXMacPacket(this.sender, packet, ACKreq);
+        }
         // Tamanho do pacote em bits
         newPacket.setHeaderLength(xConf.getLengthDATA());
         // Número de tentativas para enviar DATA

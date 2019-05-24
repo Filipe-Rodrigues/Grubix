@@ -107,6 +107,7 @@ public class EXMacRouting extends NetworkLayer {
 	
 	@Override
 	public void lowerSAP(Packet packet) throws LayerException {
+		
 		if (packet instanceof GeoRoutingPacket) {
 			GeoRoutingPacket geoRoutingPacket = (GeoRoutingPacket) packet;
 			Packet enclosed = geoRoutingPacket.getEnclosedPacket();
@@ -369,7 +370,7 @@ public class EXMacRouting extends NetworkLayer {
 					Position nextBBPosition = nextBackboneNode.getPosition();
 					Position destination = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
 							.getPosition();
-					if (source.getDistance(destination) < nextBBPosition.getDistance(destination)) {
+					if (source.getDistance(destination) <= nextBBPosition.getDistance(destination)) {
 						routePacketDirectly(packet);
 					} else {
 						NodeId nextBBNode = nextBackboneNode.getId();
