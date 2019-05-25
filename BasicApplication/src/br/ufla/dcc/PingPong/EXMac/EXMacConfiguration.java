@@ -144,8 +144,9 @@ public class EXMacConfiguration {
 		if (cycleSyncTimingRatio >= 0) {
 			double currentTime = SimulationManager.getInstance().getCurrentTime();
 			double stepsToSleep = stepsPerCycle * (1 + cycleSyncTimingRatio) - (currentTime % stepsPerCycle);
-			System.err.println((currentTime % stepsPerCycle));
-			System.err.println("SINCRONIZOU?? Se eu dormir " + stepsToSleep + ", eu acordo em " + (stepsToSleep + currentTime));
+			// System.err.println((currentTime % stepsPerCycle));
+			// System.err.println("SINCRONIZOU?? Se eu dormir " + stepsToSleep + ", eu
+			// acordo em " + (stepsToSleep + currentTime));
 			return stepsToSleep;
 
 		}
@@ -222,7 +223,7 @@ public class EXMacConfiguration {
 
 	public void updateCycleSyncTiming(double parentNodeCycleSyncTimingRatio) {
 		if (parentNodeCycleSyncTimingRatio >= 0) {
-			double cycleShift = stepsDelayTx(PacketType.CTS) + stepsDelayRx(PacketType.DATA);
+			double cycleShift = stepsDelayTx(PacketType.CTS) / 2d + stepsDelayRx(PacketType.DATA) + getStepsCS() * 0;
 			if (ackRequested) {
 				cycleShift += stepsDelayTx(PacketType.ACK);
 			}

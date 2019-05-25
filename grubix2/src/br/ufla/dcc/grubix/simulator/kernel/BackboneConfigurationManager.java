@@ -25,6 +25,8 @@ public class BackboneConfigurationManager implements Serializable {
 	
 	private SortedMap<NodeId, BackboneConfiguration> allNodesConfigurations;
 	private static BackboneConfigurationManager singleton;
+
+	private static boolean usingFile;
 	
 	private BackboneConfigurationManager() {
 		allNodesConfigurations = new TreeMap<NodeId, BackboneConfiguration>();
@@ -46,6 +48,9 @@ public class BackboneConfigurationManager implements Serializable {
 	private static void saveConfiguration() {
 		try {
 			File file = new File(System.getProperty("user.dir") + "/backbone_config/config.dat");
+			if (file.exists()) {
+				file.delete();
+			}
 			file.createNewFile();
 			FileOutputStream fos = new FileOutputStream(file);
 			ObjectOutputStream oos = new ObjectOutputStream(fos);
@@ -59,16 +64,24 @@ public class BackboneConfigurationManager implements Serializable {
 	
 	private static void loadConfiguration() {
 		try {
-			FileInputStream fis = new FileInputStream(
-					new File(System.getProperty("user.dir") + "/backbone_config/config.dat"));
-			ObjectInputStream ois = new ObjectInputStream(fis);
-			singleton = (BackboneConfigurationManager) ois.readObject();
-			ois.close();
-			System.err.println("SUCESSO!! Objeto de configuração foi carregado!");
+			if (usingFile) {
+				FileInputStream fis = new FileInputStream(
+						new File(System.getProperty("user.dir") + "/backbone_config/config.dat"));
+				ObjectInputStream ois = new ObjectInputStream(fis);
+				singleton = (BackboneConfigurationManager) ois.readObject();
+				ois.close();
+				System.err.println("SUCESSO!! Objeto de configuração foi carregado!");
+			} else {
+				throw new Exception();
+			}
 		} catch (Exception e) {
 			System.err.println("Não encontrei uma configuração de backbone, inicializando uma nova...");
 			singleton = new BackboneConfigurationManager();
 		}
+	}
+	
+	static void startup(boolean willUseFile) {
+		usingFile = willUseFile;
 	}
 	
 	public boolean amIBackbone(NodeId myId) {

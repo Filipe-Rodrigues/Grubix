@@ -30,6 +30,10 @@ public class EXMacRegularNode extends ApplicationLayer {
 	@ShoXParameter(description = "Habilita ou desabilita a produção de mensagens para o teste", defaultValue = "true")
 	private boolean testingMode;
 
+	private int source = 1500;
+	
+	private int target = 164;
+	
 	/** Ferramentas para exibir informações para a depuração do programa */
 	ToolsDebug debug = ToolsDebug.getInstance();
 
@@ -64,7 +68,7 @@ public class EXMacRegularNode extends ApplicationLayer {
 		// Se o nó possui id=1 destinado será id=2, se id=3 destino será id=4
 		/* if (node.getId().asInt() == 1 || node.getId().asInt() == 3) { */
 
-		if (testingMode && node.getId().asInt() == 1) {
+		if (testingMode && node.getId().asInt() == source) {
 			// Cria um evento wakeUpCall para si mesma para acordar após 1000 steps
 			// System.out.println("currentregularnode - node=1");
 			PingPongWakeUpCall wakeUpCall = new PingPongWakeUpCall(sender, 2000);
@@ -92,7 +96,7 @@ public class EXMacRegularNode extends ApplicationLayer {
 	public void processWakeUpCall(WakeUpCall wakeUpCall) {
 		// Se é uma instância de PingPongWakeUpCall
 		if (wakeUpCall instanceof PingPongWakeUpCall) {
-			int id = 2;
+			int id = target;
 			AppPacket pk = new AppPacket(sender, NodeId.get(id));
 			// O destino será o nó de próximo id
 			pk.setDestinationId(id);

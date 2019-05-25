@@ -167,14 +167,14 @@ public class EXMacRouting extends NetworkLayer {
 				generator = new HeuristicA(RIGHT);
 				generator.startBackbone();
 			} else if (node.getId().asInt() == 11) {
-				generator = new HeuristicA(DOWN);
-				generator.startBackbone();
+				BackboneStartupWakeUpCall bswuc = new BackboneStartupWakeUpCall(sender, DOWN, 40000);
+				sendEventSelf(bswuc);
 			} else if (node.getId().asInt() == 12) {
 				generator = new HeuristicA(LEFT);
 				generator.startBackbone();
 			} else if (node.getId().asInt() == 13) {
-				generator = new HeuristicA(UP);
-				generator.startBackbone();
+				BackboneStartupWakeUpCall bswuc = new BackboneStartupWakeUpCall(sender, UP, 40000);
+				sendEventSelf(bswuc);
 			} else {
 				generator = new HeuristicA();
 			}
@@ -184,6 +184,11 @@ public class EXMacRouting extends NetworkLayer {
 	@Override
 	public void processWakeUpCall(WakeUpCall wuc) throws LayerException {
 		debug.write(sender);
+		if (wuc instanceof BackboneStartupWakeUpCall) {
+			BackboneStartupWakeUpCall bswuc = (BackboneStartupWakeUpCall) wuc;
+			generator = new HeuristicA(bswuc.getGrowthDirection());
+			generator.startBackbone();
+		}
 	}
 
 	private abstract class EXMacBackboneGenerator {
@@ -225,7 +230,7 @@ public class EXMacRouting extends NetworkLayer {
 		/** Acesso rápido às coordenadas máximas do campo */
 		private final double MAX_X = Configuration.getInstance().getXSize();
 		private final double MAX_Y = Configuration.getInstance().getYSize();
-		private final double MEAN_HOP_DISTANCE = 34.52d;
+		private final double MEAN_HOP_DISTANCE = 34.64d;
 
 		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
 		private Position travelDirection;

@@ -56,9 +56,9 @@ public final class Simulator {
 	public static void main(String[] args) {
 		try {
 			String log4jFile = "log4j.properties";
-			if (args.length >= 2) {
-				System.out.println("Using logging " + args[1]);
-				log4jFile = args[1];
+			if (args.length >= 4) {
+				System.out.println("Using logging " + args[3]);
+				log4jFile = args[3];
 			}
 			PropertyConfigurator.configure(log4jFile);
 			LOGGER.info("Network Simulator is configuring...");
@@ -89,6 +89,8 @@ public final class Simulator {
 
 			}
 
+			BackboneConfigurationManager.startup(Boolean.parseBoolean(args[2]));
+			
 			// create empty map to fill later because NodeGenerator needs a
 			// SimulationManager reference to be able
 			// to create AirModules for Nodes.
@@ -123,7 +125,7 @@ public final class Simulator {
 					+ seed + ")");
 			
 			// Salva a configuração dos backbones. ÚTIL APENAS AO PROJETO EXMac!!!!
-			BackboneConfigurationManager.close(true);
+			BackboneConfigurationManager.close(Boolean.parseBoolean(args[1]));
 			
 			System.err.println("SIMULAÇÃO TERMINADA COM SUCESSO!");
 		} catch (ConfigurationException e) {

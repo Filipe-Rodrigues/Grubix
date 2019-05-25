@@ -10,13 +10,16 @@ public class Main {
 		try {
 			long startTime = System.currentTimeMillis();
 			//String path = "application_exmac_gerador.xml";
-			String path = "application_exmac_teste.xml";
+			//String path = "application_exmac_teste.xml";
+			//String path = "application_exmac_teste_georouting.xml";
 			//String path = "application_backbone1.xml";
 			//String path = "application_backbone2.xml";
 			//String path = args[0];
-			args = new String[1];
-			args[0] = path;
-			Simulator.main(args);
+			//args = new String[1];
+			//args[0] = path;
+			//Simulator.main(new String[]{"application_exmac_gerador.xml", "true", "false"});
+			//Simulator.main(new String[]{"application_exmac_teste.xml", "false", "true"});
+			Simulator.main(new String[]{"application_exmac_teste_georouting.xml", "false", "true"});
 			
 			long endTime   = System.currentTimeMillis();
 			long totalTime = endTime - startTime;

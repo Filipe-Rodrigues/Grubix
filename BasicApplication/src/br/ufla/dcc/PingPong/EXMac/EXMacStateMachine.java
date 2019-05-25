@@ -537,9 +537,13 @@ public class EXMacStateMachine  {
     	// Se for necessário testar com seed fixa para cada nó
     	// Random gerador = new Random(address.getId().asInt());
     	// int delay = gerador.nextInt(Integer.valueOf((int) Math.round(xConf.getStepsCycle())));
-       
-    	// Tempo pequeno aleatório em steps para ligar o nó sensor
-    	double delay = (Math.random() * (xConf.getStepsCycle()));
+    	double delay;
+    	if (xConf.isBackboneNode()) {
+    		delay = xConf.getStepsSleep();
+    	} else {
+    		// Tempo pequeno aleatório em steps para ligar o nó sensor
+        	delay = (Math.random() * (xConf.getStepsCycle()));
+    	}
     	xState.setState(EXMacStateType.SLEEP, delay);
     }
   	
