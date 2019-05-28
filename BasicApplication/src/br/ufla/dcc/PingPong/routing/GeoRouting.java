@@ -3,6 +3,7 @@ package br.ufla.dcc.PingPong.routing;
 import java.util.List;
 
 import br.ufla.dcc.PingPong.ToolsDebug;
+import br.ufla.dcc.PingPong.routing.SendDelayedWakeUpCall;
 import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.node.NetworkLayer;
 import br.ufla.dcc.grubix.simulator.node.Node;
@@ -39,8 +40,12 @@ public class GeoRouting extends NetworkLayer {
 			}
 		}
 		return minDistanceNodeId;
-	}	
-
+	}
+	
+	private void sendDelayed(Packet packet, double delay) {
+		SendDelayedWakeUpCall sdwuc = new SendDelayedWakeUpCall(sender, packet, delay);
+		sendEventSelf(sdwuc);
+	}
 	
 	private void routePacket (Packet packet) {
 		if (this.neighbors == null) {
@@ -59,7 +64,7 @@ public class GeoRouting extends NetworkLayer {
 		}
 		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);
 		
-		sendPacket(newPacket);		
+		sendDelayed(newPacket, 50);		
 	}
 	
 	
@@ -99,6 +104,10 @@ public class GeoRouting extends NetworkLayer {
 	@Override
 	public void processWakeUpCall(WakeUpCall wuc) throws LayerException { 
 		debug.write(sender);
+		if (wuc instanceof SendDelayedWakeUpCall) {
+			SendDelayedWakeUpCall sdwuc = (SendDelayedWakeUpCall) wuc;
+			sendPacket(sdwuc.getPacket());
+		}
 	}
 
 }

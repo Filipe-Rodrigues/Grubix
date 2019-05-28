@@ -127,7 +127,7 @@ public final class Simulator {
 			// Salva a configuração dos backbones. ÚTIL APENAS AO PROJETO EXMac!!!!
 			BackboneConfigurationManager.close(Boolean.parseBoolean(args[1]));
 			
-			System.err.println("SIMULAÇÃO TERMINADA COM SUCESSO!");
+			//System.err.println("SIMULAÇÃO TERMINADA COM SUCESSO!");
 		} catch (ConfigurationException e) {
 			LOGGER.error("Network Simlator has no valid configuration", e);
 			e.printStackTrace();

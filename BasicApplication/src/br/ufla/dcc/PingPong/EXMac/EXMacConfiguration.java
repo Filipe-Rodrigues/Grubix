@@ -223,7 +223,7 @@ public class EXMacConfiguration {
 
 	public void updateCycleSyncTiming(double parentNodeCycleSyncTimingRatio) {
 		if (parentNodeCycleSyncTimingRatio >= 0) {
-			double cycleShift = stepsDelayTx(PacketType.CTS) / 2d + stepsDelayRx(PacketType.DATA) + getStepsCS() * 0;
+			double cycleShift = stepsDelayTx(PacketType.CTS) + stepsDelayRx(PacketType.DATA) + getStepsCS() * 2.5;
 			if (ackRequested) {
 				cycleShift += stepsDelayTx(PacketType.ACK);
 			}

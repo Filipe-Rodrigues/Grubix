@@ -20,6 +20,7 @@ package br.ufla.dcc.PingPong.EXMac;
 
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.Direction;
+import br.ufla.dcc.grubix.simulator.LayerType;
 import br.ufla.dcc.grubix.simulator.event.CrossLayerEvent;
 import br.ufla.dcc.grubix.simulator.event.LogLinkPacket;
 import br.ufla.dcc.grubix.simulator.event.MACPacket;
@@ -133,9 +134,6 @@ public class EXMac extends MACLayer {
 			switchToBackbone();
 			xConf.setCycleSyncTiming(BackboneConfigurationManager.getInstance().getNodeCycleSyncTiming(node.getId()));
 		}
-		if (node.getId().asInt() == 10 || node.getId().asInt() == 447 || node.getId().asInt() == 957) {
-			System.err.println("ID #" + node.getId() + " timer: " + xConf.getCycleSyncTimingRatio());
-		}
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();
 		// testBackbone();
@@ -173,12 +171,6 @@ public class EXMac extends MACLayer {
 			}
 			// xState.setEvent(XMacEventType.TIME_OUT);
 			event = EXMacEventType.TIME_OUT;
-			if (xState.getState().equals(EXMacState.EXMacStateType.SLEEP)
-					&& (node.getId().asInt() == -1 || node.getId().asInt() == -2)) {
-				double time = SimulationManager.getInstance().getCurrentTime();
-				System.err.println("Node #" + node.getId() + " woke up: " + (time) + " // RATIO: "
-						+ xConf.getCycleSyncTimingRatio());
-			}
 		}
 
 		// Tratamento dos eventos emitidos pela PHY.
@@ -373,6 +365,12 @@ public class EXMac extends MACLayer {
 		case TURN_OFF:
 			/* Manda desligar o rádio - estado OFF */
 			sendEventDown(new EventPhyTurnRadio(this.sender, false));
+			break;
+			
+		case TURN_OFF_CS_END:
+			/* Manda desligar o rádio - estado OFF */
+			sendEventDown(new EventPhyTurnRadio(this.sender, false));
+			sendEventTo(new EventFinishedCSEnd(sender), LayerType.NETWORK);
 			break;
 
 		case START_RTS:

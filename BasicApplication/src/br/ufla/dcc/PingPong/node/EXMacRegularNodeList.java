@@ -3,6 +3,7 @@ package br.ufla.dcc.PingPong.node;
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
 import br.ufla.dcc.PingPong.ToolsStatisticsSimulation;
+import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.Finalize;
 import br.ufla.dcc.grubix.simulator.event.Packet;
@@ -14,8 +15,12 @@ import br.ufla.dcc.grubix.simulator.node.ApplicationLayer;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
 /** Classe que define a aplicação */
-public class EXMacRegularNode extends ApplicationLayer {
+public class EXMacRegularNodeList extends ApplicationLayer {
 
+	private static int TARGET_ID = 2;
+	
+	private static final int PING_PONG_COUNTER = 10;
+	
 	/** Posição dos nós que irão inicializar o envio do dado */
 	@ShoXParameter(description = " Nós que iniciarão o envio do dado")
 	private int simultaneousTx;
@@ -30,9 +35,6 @@ public class EXMacRegularNode extends ApplicationLayer {
 	@ShoXParameter(description = "Habilita ou desabilita a produção de mensagens para o teste", defaultValue = "true")
 	private boolean testingMode;
 
-	private int source = 1;
-	
-	private int target = 2;
 	
 	/** Ferramentas para exibir informações para a depuração do programa */
 	ToolsDebug debug = ToolsDebug.getInstance();
@@ -49,6 +51,15 @@ public class EXMacRegularNode extends ApplicationLayer {
 	/** Id do último nó que receberá a mensagem */
 	// private int lastNodeId = 2;
 
+	private void sendMessage() {
+		int id = TARGET_ID++;
+		AppPacket pk = new AppPacket(sender, NodeId.get(id));
+		pk.setDestinationId(id);
+		sendPacket(pk);
+		SimulationManager.logNodeState(node.getId(), "Primeiro envio", "int", String.valueOf(10));
+		SimulationManager.logNodeState(NodeId.get(id), "Destino", "int", String.valueOf(10));
+	}
+	
 	@Override
 	public int getPacketTypeCount() {
 		return 1;
@@ -65,14 +76,10 @@ public class EXMacRegularNode extends ApplicationLayer {
 	 * Inicia a execução da camada de aplicação (primeira função a ser executada)
 	 */
 	protected void processEvent(StartSimulation start) {
-		// Se o nó possui id=1 destinado será id=2, se id=3 destino será id=4
-		/* if (node.getId().asInt() == 1 || node.getId().asInt() == 3) { */
 
-		if (testingMode && node.getId().asInt() == source) {
-			// Cria um evento wakeUpCall para si mesma para acordar após 1000 steps
-			// System.out.println("currentregularnode - node=1");
-			PingPongWakeUpCall wakeUpCall = new PingPongWakeUpCall(sender, 2000);
-			sendEventSelf(wakeUpCall);
+		if (testingMode && node.getId().asInt() == 1) {
+			SingletonTestResult.getInstance().setStartingTime(SimulationManager.getInstance().getCurrentTime());
+			sendMessage();
 		}
 
 	}
@@ -82,13 +89,13 @@ public class EXMacRegularNode extends ApplicationLayer {
 	public void lowerSAP(Packet packet) {
 		// Se o packet é instância de AppPacket
 		if (packet instanceof AppPacket) {
-			AppPacket pk = (AppPacket) packet;
-
-			System.out.println("CABECALHO RECEBIDO " + pk.PacketId);
-			// Ferramentas de depuração -------------------------
-			misc.vGrubix(node.getId(), "Chegou destino", "BLUE");
-			debug.print("$$$[Dado-chegou] Dado recebido pela aplicação!!!.", sender);
-			// --------------------------------------------------
+			if (TARGET_ID <= PING_PONG_COUNTER) {
+				System.err.println("PING PONG");
+				sendMessage();
+			} else {
+				SingletonTestResult.getInstance().setEndingTime(SimulationManager.getInstance().getCurrentTime());
+				System.out.println(SingletonTestResult.getInstance().getTime());
+			}
 		}
 	}
 
@@ -96,7 +103,7 @@ public class EXMacRegularNode extends ApplicationLayer {
 	public void processWakeUpCall(WakeUpCall wakeUpCall) {
 		// Se é uma instância de PingPongWakeUpCall
 		if (wakeUpCall instanceof PingPongWakeUpCall) {
-			int id = target;
+			int id = TARGET_ID++;
 			AppPacket pk = new AppPacket(sender, NodeId.get(id));
 			// O destino será o nó de próximo id
 			pk.setDestinationId(id);

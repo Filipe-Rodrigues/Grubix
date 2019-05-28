@@ -86,6 +86,7 @@ public class EXMacStateMachine  {
     				/* Quando ocorre uma falha no envio de MSG, voltará aqui. */
     				// Decrementa o número de chances que tem para tentar enviar DATA 
     				if(xState.getDataPkt().decRetryCount() > 0){
+    					//System.err.println("timeout NODE #" + address.getId() + " SENDING ON TIME: " + SimulationManager.getInstance().getCurrentTime());
     					// Reiniciar o contador numCSstart, número de vezes que se tentou estabelecer comunicação   */
         				xState.setRetryCSstart(xConf.getMaxBOstarts());
     					changeState = setNewState(EXMacStateType.CS_START, xConf.getStepsCS(), EXMacActionType.ASK_CHANNEL);
@@ -106,6 +107,7 @@ public class EXMacStateMachine  {
     		break;
     		
     		case LOG_LINK:
+    			//System.err.println("log link NODE #" + address.getId() + " SENDING ON TIME: " + SimulationManager.getInstance().getCurrentTime());
     			/* Uma ordem da Log Link Layer para enviar mensagem. Deve-se verificar se o canal está ocupado */
     			xState.setRetryCSstart(xConf.getMaxBOstarts());
     			changeState = setNewState(EXMacStateType.CS_START, xConf.getStepsCS(), EXMacActionType.ASK_CHANNEL);
@@ -207,13 +209,14 @@ public class EXMacStateMachine  {
     		
     		case TIME_OUT:
     			/* Se não recebeu uma mensagem completa (pela Lower SAP), pode ser um DATA. Verifique o rádio */
+    			
     			xState.setAction(EXMacActionType.ASK_CHANNEL);
     			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = TIME_OUT, verifique o canal " );
     		break;
     			
     		case CHANNEL_FREE:
     			/* Nenhuma mensagem adicional foi enviada para este nó. Vá dormir   */
-    			changeState = goToSleep(EXMacActionType.TURN_OFF);
+    			changeState = goToSleep(EXMacActionType.TURN_OFF_CS_END);
     			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = CHANNEL_FREE" );
     		break;
     		
@@ -236,7 +239,7 @@ public class EXMacStateMachine  {
  
     		default:
     			/* Se recebeu um CTS ou ACK, então vá dormir.  */
-    			changeState = goToSleep(EXMacActionType.TURN_OFF);
+    			changeState = goToSleep(EXMacActionType.TURN_OFF_CS_END);
     			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = " + event);
 				break;
             }
@@ -408,7 +411,7 @@ public class EXMacStateMachine  {
          	/* MAC está esperando receber uma mensagem DATA pelo rádio.   */ 
     		switch (event){
     		case TIME_OUT:
-    			System.err.println("PERDI A MSG");
+    			//System.err.println("PERDI A MSG");
     			/* Acabou o tempo e não recebeu o pacote de dados, então o próximo estado será CS, 
     			 * pois talvez outro nó queira transmitir uma mensagem                             */
      			changeState = goToSleep(EXMacActionType.TURN_OFF);
@@ -416,6 +419,7 @@ public class EXMacStateMachine  {
     		break;
     			
     		case DATA_RECEIVED:
+    			//System.err.println("RECEIVED AT NODE #" + address.getId() + " ON TIME: " + SimulationManager.getInstance().getCurrentTime());
     			/* Envie ACK se foi requisitado.
     			 * Ou envie DATA para a Log Link Layer e vá pra o CS_END  */
     			if (xState.getRecPkt().isAckRequested()){
@@ -497,7 +501,7 @@ public class EXMacStateMachine  {
     
     
     private boolean goToSleep(EXMacActionType action) {
-    	double operationSteps = SimulationManager.getInstance().getCurrentTime() - stepsFromLastSleep;
+    	//double operationSteps = SimulationManager.getInstance().getCurrentTime() - stepsFromLastSleep;
     	return setNewState(EXMacStateType.SLEEP, xConf.getStepsSleep(), action);
     }
     

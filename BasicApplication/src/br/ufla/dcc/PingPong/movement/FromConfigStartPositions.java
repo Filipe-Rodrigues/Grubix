@@ -25,7 +25,7 @@ public class FromConfigStartPositions extends StartPositionGenerator {
 	
 	public FromConfigStartPositions() {
 		File file = new File(fileName);
-		System.err.println(file);
+		//System.err.println(file);
 		readXML(file);
 	}
 

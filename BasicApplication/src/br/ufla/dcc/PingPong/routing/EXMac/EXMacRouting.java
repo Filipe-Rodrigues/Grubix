@@ -7,15 +7,18 @@ import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.UP;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
+import br.ufla.dcc.PingPong.EXMac.EventFinishedCSEnd;
 import br.ufla.dcc.PingPong.movement.FromConfigStartPositions;
 import br.ufla.dcc.PingPong.routing.GeoRoutingPacket;
 import br.ufla.dcc.grubix.simulator.LayerException;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.Position;
+import br.ufla.dcc.grubix.simulator.event.CrossLayerEvent;
 import br.ufla.dcc.grubix.simulator.event.Packet;
 import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
@@ -38,12 +41,16 @@ public class EXMacRouting extends NetworkLayer {
 	/** Lista de nós vizinhos */
 	private List<Node> neighbors = null;
 	private List<NodeId> backboneNeighbors = null;
+	
+	/** Fila de pacotes a serem roteados */
+	private Queue<Pair<Queue<Byte>, Packet>> packetQueue = null;
 
 	/** Objeto de invocação do gerador de backbones */
 	private EXMacBackboneGenerator generator;
 
 	public EXMacRouting() {
 		backboneNeighbors = new ArrayList<>();
+		packetQueue = new LinkedList<Pair<Queue<Byte>, Packet>>();
 		generator = null;
 	}
 
@@ -122,7 +129,7 @@ public class EXMacRouting extends NetworkLayer {
 				// Ferramentas de depuração -------------------------
 				debug.print("[Roteamento] Mensagem não é para mim, será enviada para camada abaixo (LLC)", sender);
 				// --------------------------------------------------
-				routePacketDirectly(enclosed);
+				packetQueue.add(new Pair<Queue<Byte>, Packet>(null, enclosed));
 			}
 		} else if (packet instanceof EXMacRoutingControlPacket) {
 			EXMacRoutingControlPacket controlPacket = (EXMacRoutingControlPacket) packet;
@@ -146,7 +153,7 @@ public class EXMacRouting extends NetworkLayer {
 			if (enclosed.getReceiver().equals(getId())) {
 				sendPacket(enclosed);
 			} else {
-				generator.routePacketUsingBackbone(enclosed, exmacPacket.getBackboneSegmentPath());
+				packetQueue.add(new Pair<Queue<Byte>, Packet>(exmacPacket.getBackboneSegmentPath(), enclosed));
 			}
 		}
 	}
@@ -184,7 +191,18 @@ public class EXMacRouting extends NetworkLayer {
 	@Override
 	public void processWakeUpCall(WakeUpCall wuc) throws LayerException {
 		debug.write(sender);
-		if (wuc instanceof BackboneStartupWakeUpCall) {
+		if (wuc instanceof CrossLayerEvent) {
+			if (wuc instanceof EventFinishedCSEnd) {
+				if (!packetQueue.isEmpty()) {
+					Pair<Queue<Byte>, Packet> nextPacket = packetQueue.poll();
+					if (nextPacket.getLeft() == null) {
+						routePacketDirectly(nextPacket.getRight());
+					} else {
+						generator.routePacketUsingBackbone(nextPacket.getRight(), nextPacket.getLeft());
+					}
+				}
+			}
+		} else if (wuc instanceof BackboneStartupWakeUpCall) {
 			BackboneStartupWakeUpCall bswuc = (BackboneStartupWakeUpCall) wuc;
 			generator = new HeuristicA(bswuc.getGrowthDirection());
 			generator.startBackbone();
@@ -303,8 +321,8 @@ public class EXMacRouting extends NetworkLayer {
 					+ getHopDistanceFromBackbone(target, backboneDirectionTarget)
 					+ shortestPath.getLeft();
 			double directDist = getDirectHopDistance(node.getPosition(), target);
-			System.err.println("BB DIST: " + backbonedDist);
-			System.err.println("DIR DIST: " + directDist);
+			//System.err.println("BB DIST: " + backbonedDist);
+			//System.err.println("DIR DIST: " + directDist);
 			if (directDist <= backbonedDist) {
 				routePacketDirectly(packet);
 			} else {
@@ -332,7 +350,7 @@ public class EXMacRouting extends NetworkLayer {
 					for (NodeId neighbor : backboneNeighbors) {
 						byte neighLabel = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(neighbor);
 						if (neighLabel == backboneSegment) {
-							System.err.println("FOUND BACKBONE BRANCH: ");
+							//System.err.println("FOUND BACKBONE BRANCH: ");
 							intermediatePaths.poll();
 							sendEXMacRoutingPacket(packet, neighbor, intermediatePaths);
 							sentMessage = true;
@@ -379,8 +397,7 @@ public class EXMacRouting extends NetworkLayer {
 						routePacketDirectly(packet);
 					} else {
 						NodeId nextBBNode = nextBackboneNode.getId();
-						EXMacRoutingPacket exmacPacket = new EXMacRoutingPacket(sender, nextBBNode, packet, intermediatePaths);
-						sendPacket(exmacPacket);
+						sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
 					}
 				} else {
 					routePacketDirectly(packet);
@@ -558,7 +575,7 @@ public class EXMacRouting extends NetworkLayer {
 			} else {
 				distance = Math.abs(test.getXCoord() - (MAX_X / 3d)) / MEAN_HOP_DISTANCE;
 			}
-			return distance;
+			return distance + 2;
 		}
 		
 		private double getDirectHopDistance(Position source, Position target) {

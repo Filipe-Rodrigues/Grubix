@@ -7,7 +7,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -24,12 +26,14 @@ public class BackboneConfigurationManager implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
 	private SortedMap<NodeId, BackboneConfiguration> allNodesConfigurations;
+	private Queue<Integer> testNodes;
 	private static BackboneConfigurationManager singleton;
 
 	private static boolean usingFile;
 	
 	private BackboneConfigurationManager() {
 		allNodesConfigurations = new TreeMap<NodeId, BackboneConfiguration>();
+		testNodes = new LinkedList<Integer>();
 	}
 	
 	public static BackboneConfigurationManager getInstance() {
@@ -56,7 +60,7 @@ public class BackboneConfigurationManager implements Serializable {
 			ObjectOutputStream oos = new ObjectOutputStream(fos);
 			oos.writeObject(singleton);
 			oos.close();
-			System.err.println("SUCESSO!! OBJETO DE CONFIGURAÇÃO SALVO!");
+			//System.err.println("SUCESSO!! OBJETO DE CONFIGURAÇÃO SALVO!");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -70,13 +74,23 @@ public class BackboneConfigurationManager implements Serializable {
 				ObjectInputStream ois = new ObjectInputStream(fis);
 				singleton = (BackboneConfigurationManager) ois.readObject();
 				ois.close();
-				System.err.println("SUCESSO!! Objeto de configuração foi carregado!");
+				//loadTestNodes();
+				//System.err.println("SUCESSO!! Objeto de configuração foi carregado!");
 			} else {
 				throw new Exception();
 			}
 		} catch (Exception e) {
 			System.err.println("Não encontrei uma configuração de backbone, inicializando uma nova...");
 			singleton = new BackboneConfigurationManager();
+		}
+	}
+	
+	private static void loadTestNodes() {
+		try {
+			FileInputStream fid = new FileInputStream(
+					new File(System.getProperty("user.dir") + "/backbone_config/application_targets.dat"));
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	

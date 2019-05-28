@@ -280,6 +280,9 @@ public class EXMacState extends LayerState {
 		/** Ordenar o rádio para desligar. */
 		TURN_OFF,
 		
+		/** Ordenar o rádio para desligar e enviar CrossLayerEvent. */
+		TURN_OFF_CS_END,
+		
 		/** Pergutar ao rádio se o canal está ocupado */
 		ASK_CHANNEL
 	}

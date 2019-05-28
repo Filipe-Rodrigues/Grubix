@@ -212,7 +212,7 @@ public class XMac extends MACLayer {
 	*/
 	public final void upperSAP(Packet llPacket) {
 		
-		if (this.node.getId().asInt() == 1)  { 
+		if (this.node.getId().asInt() == -1)  { 
 			System.out.println("\n  +  Este é o X-MAC 2019  +\n");
 			xConf.imprimeParametros();
 		}
