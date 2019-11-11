@@ -17,6 +17,12 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
 /** Classe que define a aplicação */
 public class EXMacRegularNodeList extends ApplicationLayer {
 
+	private static final boolean LIST_MODE = false;
+	
+	private static int TARGET_COUNTER_ID = 2;
+	
+	private static int SOURCE_ID = 1;
+	
 	private static int TARGET_ID = 2;
 	
 	private static final int PING_PONG_COUNTER = 10;
@@ -52,7 +58,10 @@ public class EXMacRegularNodeList extends ApplicationLayer {
 	// private int lastNodeId = 2;
 
 	private void sendMessage() {
-		int id = TARGET_ID++;
+		int id = TARGET_ID;
+		if (LIST_MODE) {
+			id = TARGET_COUNTER_ID++;
+		}
 		AppPacket pk = new AppPacket(sender, NodeId.get(id));
 		pk.setDestinationId(id);
 		sendPacket(pk);
@@ -77,7 +86,7 @@ public class EXMacRegularNodeList extends ApplicationLayer {
 	 */
 	protected void processEvent(StartSimulation start) {
 
-		if (testingMode && node.getId().asInt() == 1) {
+		if (testingMode && node.getId().asInt() == SOURCE_ID) {
 			SingletonTestResult.getInstance().setStartingTime(SimulationManager.getInstance().getCurrentTime());
 			sendMessage();
 		}
@@ -85,11 +94,12 @@ public class EXMacRegularNodeList extends ApplicationLayer {
 	}
 
 	/** Trata pacotes vindos da camada de baixo */
+	@SuppressWarnings("unused")
 	@Override
 	public void lowerSAP(Packet packet) {
 		// Se o packet é instância de AppPacket
 		if (packet instanceof AppPacket) {
-			if (TARGET_ID <= PING_PONG_COUNTER) {
+			if (LIST_MODE && TARGET_COUNTER_ID <= PING_PONG_COUNTER) {
 				System.err.println("PING PONG");
 				sendMessage();
 			} else {
@@ -103,7 +113,7 @@ public class EXMacRegularNodeList extends ApplicationLayer {
 	public void processWakeUpCall(WakeUpCall wakeUpCall) {
 		// Se é uma instância de PingPongWakeUpCall
 		if (wakeUpCall instanceof PingPongWakeUpCall) {
-			int id = TARGET_ID++;
+			int id = TARGET_COUNTER_ID++;
 			AppPacket pk = new AppPacket(sender, NodeId.get(id));
 			// O destino será o nó de próximo id
 			pk.setDestinationId(id);

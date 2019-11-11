@@ -314,19 +314,21 @@ public class EXMacRouting extends NetworkLayer {
 				targetBBSegment = getCorrespondingLabel(target, backboneDirectionTarget);
 			} while (isDeadEndTarget(targetBBSegment));
 			
-			Entry<Integer, Queue<Byte>> shortestPath = BackboneRouteGraph.getInstance("heuristicA.cfg")
+			Entry<Float, Queue<Byte>> shortestPath = BackboneRouteGraph.getInstance("heuristicA.cfg")
 					.getshortestPath(sourceBBSegment, targetBBSegment);
 			//System.err.println(sourceBBSegment + " ==> " + targetBBSegment);
 			double backbonedDist = getHopDistanceFromBackbone(source, backboneDirectionSource)
 					+ getHopDistanceFromBackbone(target, backboneDirectionTarget)
 					+ shortestPath.getLeft();
 			double directDist = getDirectHopDistance(node.getPosition(), target);
-			//System.err.println("BB DIST: " + backbonedDist);
-			//System.err.println("DIR DIST: " + directDist);
+			System.err.print("BB DIST: " + backbonedDist + " ///// ");
+			System.err.println("DIR DIST: " + directDist);
 			if (directDist <= backbonedDist) {
 				routePacketDirectly(packet);
+				System.err.println("Using DIRECT........");
 			} else {
 				routePacketUsingBackbone(packet, shortestPath.getRight());
+				System.err.println("Using BACKBONE........");
 			}
 		}
 
@@ -415,22 +417,59 @@ public class EXMacRouting extends NetworkLayer {
 			return nextBackboneNode != null;
 		}
 		
+//		private Node selectNextNeighbor() {
+//			Node selectedNode = null;
+//			ensureNeighborhoodInitialization();
+//			for (Node neighbor : neighbors) {
+//				if (!backboneNeighbors.contains(neighbor.getId()) && isEligible(neighbor.getPosition())) {
+//					if (selectedNode == null 
+//							|| isMoreAlignedThan(neighbor.getPosition(), selectedNode.getPosition())) {
+//						selectedNode = neighbor;
+//					}
+//				}
+//			}
+//			if (selectedNode != null) {
+//				return selectedNode;
+//			}
+//
+//			return node;
+//		}
+		
 		private Node selectNextNeighbor() {
-			Node selectedNode = null;
+			Node selectedNode = node;
 			ensureNeighborhoodInitialization();
 			for (Node neighbor : neighbors) {
 				if (!backboneNeighbors.contains(neighbor.getId()) && isEligible(neighbor.getPosition())) {
-					if (selectedNode == null 
+					if (selectedNode == node 
 							|| isMoreAlignedThan(neighbor.getPosition(), selectedNode.getPosition())) {
 						selectedNode = neighbor;
 					}
 				}
 			}
-			if (selectedNode != null) {
-				return selectedNode;
+			return selectedNode;
+		}
+		
+		private double getDistanceFromTarget(Position neighbor) {
+			Position hypoTarget = getHypocenterTarget();
+			return neighbor.getDistance(hypoTarget);
+		}
+		
+		private Position getHypocenterTarget() {
+			Position hypoTarget;
+			if (travelDirection.getXCoord() != 0) {
+				if (travelDirection.getXCoord() > 0) {
+					hypoTarget = new Position(MAX_X, hypocenter.getYCoord());
+				} else {
+					hypoTarget = new Position(0, hypocenter.getYCoord());
+				}
+			} else {
+				if (travelDirection.getYCoord() > 0) {
+					hypoTarget = new Position(hypocenter.getXCoord(), MAX_Y);
+				} else {
+					hypoTarget = new Position(hypocenter.getXCoord(), 0);
+				}
 			}
-
-			return node;
+			return hypoTarget;
 		}
 		
 		private boolean canIGrowMore() {
@@ -462,19 +501,7 @@ public class EXMacRouting extends NetworkLayer {
 		}
 		
 		private boolean isMoreAlignedThan(Position test, Position reference) {
-			Position testAux;
-			Position refAux;
-			Position hypAux;
-			if (travelDirection.getXCoord() != 0) {
-				testAux = new Position(0, test.getYCoord());
-				refAux = new Position(0, reference.getYCoord());
-				hypAux = new Position(0, hypocenter.getYCoord());
-			} else {
-				testAux = new Position(test.getXCoord(), 0);
-				refAux = new Position(reference.getXCoord(), 0);
-				hypAux = new Position(hypocenter.getXCoord(), 0);
-			}
-			return testAux.getDistance(hypAux) < refAux.getDistance(hypAux);
+			return getDistanceFromTarget(test) < getDistanceFromTarget(reference);
 		}
 		
 		private byte getCorrespondingLabel(Position nodePosition, Position travelDirection) {
@@ -575,7 +602,7 @@ public class EXMacRouting extends NetworkLayer {
 			} else {
 				distance = Math.abs(test.getXCoord() - (MAX_X / 3d)) / MEAN_HOP_DISTANCE;
 			}
-			return distance + 2;
+			return distance;
 		}
 		
 		private double getDirectHopDistance(Position source, Position target) {
