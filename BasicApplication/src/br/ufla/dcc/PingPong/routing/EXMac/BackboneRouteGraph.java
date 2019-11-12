@@ -8,12 +8,14 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
+import br.ufla.dcc.grubix.simulator.Position;
+
 public class BackboneRouteGraph {
 
 	private static final float INFINITE = Float.MAX_VALUE;
 	private static Map<String, BackboneRouteGraph> instances = new HashMap<String, BackboneRouteGraph>();
 
-	private float[][] adjacencyMatrix;
+	private Position[][] adjacencyMatrix;
 	private byte vertexCount;
 	private byte edgeCount;
 	private boolean directed;
@@ -44,7 +46,7 @@ public class BackboneRouteGraph {
 					i--;
 					j--;
 				}
-				adjacencyMatrix[i][j] = Float.parseFloat(line.split(" ")[2]);
+				adjacencyMatrix[i][j] = new Position(Float.parseFloat(line.split(" ")[2]), Float.parseFloat(line.split(" ")[3]));
 			}
 			br.close();
 		} catch (Exception e) {
@@ -53,10 +55,10 @@ public class BackboneRouteGraph {
 	}
 
 	private void emptyAdjMatrix() {
-		adjacencyMatrix = new float[vertexCount][vertexCount];
+		adjacencyMatrix = new Position[vertexCount][vertexCount];
 		for (int i = 0; i < vertexCount; i++) {
 			for (int j = 0; j < vertexCount; j++) {
-				adjacencyMatrix[i][j] = -1;
+				adjacencyMatrix[i][j] = null;
 			}
 		}
 	}
@@ -94,11 +96,11 @@ public class BackboneRouteGraph {
 		queue.add((byte) ((startsOnZero) ? (currentIndex) : (currentIndex + 1)));
 	}
 
-	public Entry<Float, Queue<Byte>> getshortestPath(int source, int target) {
-		return getshortestPath((byte) source, (byte) target);
+	public Entry<Float, Queue<Byte>> getshortestPath(int source, int target, Position in, Position out) {
+		return getshortestPath((byte) source, (byte) target, in, out);
 	}
 	
-	public Entry<Float, Queue<Byte>> getshortestPath(byte source, byte target) {
+	public Entry<Float, Queue<Byte>> getshortestPath(byte source, byte target, Position in, Position out) {
 		boolean[] shortestPathTree = new boolean[vertexCount];
 		float[] distances = new float[vertexCount];
 		byte[] parents = new byte[vertexCount];
