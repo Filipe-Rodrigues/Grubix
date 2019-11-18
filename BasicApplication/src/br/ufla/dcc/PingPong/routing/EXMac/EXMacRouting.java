@@ -248,7 +248,10 @@ public class EXMacRouting extends NetworkLayer {
 		/** Acesso rápido às coordenadas máximas do campo */
 		private final double MAX_X = Configuration.getInstance().getXSize();
 		private final double MAX_Y = Configuration.getInstance().getYSize();
-		private final double MEAN_HOP_DISTANCE = 34.64d;
+		private final double MEAN_HOP_DISTANCE = 35.64d;
+		private final int MEAN_PREAMBLE_COUNT_NORMAL = 24;
+		private final int MEAN_PREAMBLE_COUNT_BACKBONE = 6;
+		
 
 		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
 		private Position travelDirection;
@@ -314,13 +317,15 @@ public class EXMacRouting extends NetworkLayer {
 				targetBBSegment = getCorrespondingLabel(target, backboneDirectionTarget);
 			} while (isDeadEndTarget(targetBBSegment));
 			
-			Entry<Float, Queue<Byte>> shortestPath = BackboneRouteGraph.getInstance("heuristicA.cfg")
-					.getshortestPath(sourceBBSegment, targetBBSegment);
+			Position enter = getIntersectionWithBackbone(source, getDirectionFromLabel(sourceBBSegment));
+			Position exit = getIntersectionWithBackbone(target, getDirectionFromLabel(targetBBSegment));
+			Entry<Double, Queue<Byte>> shortestPath = BackboneRouteGraph.getInstance("heuristicA.cfg")
+					.getshortestPath(sourceBBSegment, targetBBSegment, enter, exit);
 			//System.err.println(sourceBBSegment + " ==> " + targetBBSegment);
-			double backbonedDist = getHopDistanceFromBackbone(source, backboneDirectionSource)
-					+ getHopDistanceFromBackbone(target, backboneDirectionTarget)
-					+ shortestPath.getLeft();
-			double directDist = getDirectHopDistance(node.getPosition(), target);
+			double backbonedDist = estimatePreambleCountToBackbone(source, backboneDirectionSource)
+					+ estimatePreambleCountToBackbone(target, backboneDirectionTarget)
+					+ (MEAN_PREAMBLE_COUNT_BACKBONE * shortestPath.getLeft() / MEAN_HOP_DISTANCE);
+			double directDist = estimatePreambleCountDirect(node.getPosition(), target);
 			System.err.print("BB DIST: " + backbonedDist + " ///// ");
 			System.err.println("DIR DIST: " + directDist);
 			if (directDist <= backbonedDist) {
@@ -591,34 +596,46 @@ public class EXMacRouting extends NetworkLayer {
 					|| label == 11 || label < 1 || label > 12);
 		}
 		
-		private double getHopDistanceFromBackbone(Position test, Position travelDirection) {
-			double distance;
-			if (travelDirection.equals(RIGHT)) {
-				distance = Math.abs(test.getYCoord() - (MAX_Y / 3d)) / MEAN_HOP_DISTANCE;
-			} else if (travelDirection.equals(DOWN)) {
-				distance = Math.abs(test.getXCoord() - 2 * (MAX_X / 3d)) / MEAN_HOP_DISTANCE;
-			} else if (travelDirection.equals(LEFT)) {
-				distance = Math.abs(test.getYCoord() - 2 * (MAX_Y / 3d)) / MEAN_HOP_DISTANCE;
-			} else {
-				distance = Math.abs(test.getXCoord() - (MAX_X / 3d)) / MEAN_HOP_DISTANCE;
-			}
-			return distance;
+		private double estimatePreambleCountDirect(Position source, Position target) {
+			return MEAN_PREAMBLE_COUNT_NORMAL * source.getDistance(target) / MEAN_HOP_DISTANCE;
 		}
 		
-		private double getDirectHopDistance(Position source, Position target) {
-			return source.getDistance(target) / MEAN_HOP_DISTANCE;
+		private double estimatePreambleCountToBackbone(Position test, Position travelDirection) {
+			double distance;
+			if (travelDirection.equals(RIGHT)) {
+				distance = Math.abs(test.getYCoord() - (MAX_Y / 3d));
+			} else if (travelDirection.equals(DOWN)) {
+				distance = Math.abs(test.getXCoord() - 2 * (MAX_X / 3d));
+			} else if (travelDirection.equals(LEFT)) {
+				distance = Math.abs(test.getYCoord() - 2 * (MAX_Y / 3d));
+			} else {
+				distance = Math.abs(test.getXCoord() - (MAX_X / 3d));
+			}
+			return MEAN_PREAMBLE_COUNT_NORMAL * distance / MEAN_HOP_DISTANCE;
+		}
+		
+		private Position getIntersectionWithBackbone(Position test, Position travelDirection) {
+			if (travelDirection.equals(RIGHT)) {
+				return new Position(test.getXCoord(), (MAX_Y / 3d));
+			} else if (travelDirection.equals(DOWN)) {
+				return new Position(2 * (MAX_X / 3d), test.getYCoord());
+			} else if (travelDirection.equals(LEFT)) {
+				return new Position(test.getXCoord(), 2 * (MAX_Y / 3d));
+			} else {
+				return new Position((MAX_X / 3d), test.getYCoord());
+			}
 		}
 		
 		private List<Entry<Double, Position>> getOrderedBackboneList(Position test) {
 			List<Entry<Double, Position>> backbones = new ArrayList<Entry<Double,Position>>();
 			backbones.add(new Entry<Double, Position>(
-					getHopDistanceFromBackbone(test, RIGHT), RIGHT));
+					estimatePreambleCountToBackbone(test, RIGHT), RIGHT));
 			backbones.add(new Entry<Double, Position>(
-					getHopDistanceFromBackbone(test, DOWN), DOWN));
+					estimatePreambleCountToBackbone(test, DOWN), DOWN));
 			backbones.add(new Entry<Double, Position>(
-					getHopDistanceFromBackbone(test, LEFT), LEFT));
+					estimatePreambleCountToBackbone(test, LEFT), LEFT));
 			backbones.add(new Entry<Double, Position>(
-					getHopDistanceFromBackbone(test, UP), UP));
+					estimatePreambleCountToBackbone(test, UP), UP));
 			Collections.sort(backbones);
 			return backbones;
 		}
