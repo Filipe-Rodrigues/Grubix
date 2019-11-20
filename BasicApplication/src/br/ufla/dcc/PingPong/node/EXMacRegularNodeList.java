@@ -17,7 +17,7 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
 /** Classe que define a aplicação */
 public class EXMacRegularNodeList extends ApplicationLayer {
 
-	private static final boolean LIST_MODE = false;
+	private static final boolean LIST_MODE = true;
 	
 	private static int TARGET_COUNTER_ID = 2;
 	

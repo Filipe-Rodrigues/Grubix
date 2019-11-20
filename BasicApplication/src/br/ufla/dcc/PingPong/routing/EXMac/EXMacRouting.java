@@ -174,13 +174,13 @@ public class EXMacRouting extends NetworkLayer {
 				generator = new HeuristicA(RIGHT);
 				generator.startBackbone();
 			} else if (node.getId().asInt() == 11) {
-				BackboneStartupWakeUpCall bswuc = new BackboneStartupWakeUpCall(sender, DOWN, 40000);
+				BackboneStartupWakeUpCall bswuc = new BackboneStartupWakeUpCall(sender, DOWN, 40450);
 				sendEventSelf(bswuc);
 			} else if (node.getId().asInt() == 12) {
 				generator = new HeuristicA(LEFT);
 				generator.startBackbone();
 			} else if (node.getId().asInt() == 13) {
-				BackboneStartupWakeUpCall bswuc = new BackboneStartupWakeUpCall(sender, UP, 40000);
+				BackboneStartupWakeUpCall bswuc = new BackboneStartupWakeUpCall(sender, UP, 40450);
 				sendEventSelf(bswuc);
 			} else {
 				generator = new HeuristicA();
@@ -249,15 +249,15 @@ public class EXMacRouting extends NetworkLayer {
 		private final double MAX_X = Configuration.getInstance().getXSize();
 		private final double MAX_Y = Configuration.getInstance().getYSize();
 		private final double MEAN_HOP_DISTANCE = 35.64d;
-		private final int MEAN_PREAMBLE_COUNT_NORMAL = 24;
-		private final int MEAN_PREAMBLE_COUNT_BACKBONE = 6;
+		private final double MEAN_PREAMBLE_COUNT_NORMAL = 24;
+		private final double MEAN_PREAMBLE_COUNT_BACKBONE = 8;
 		
 
 		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
 		private Position travelDirection;
 		
 		/** Caso eu seja um nó Backbone, este é meu identificador de segmento */
-		private byte label;
+		private List<Byte> labelClass;
 
 		private HeuristicA() {
 		}
@@ -267,9 +267,10 @@ public class EXMacRouting extends NetworkLayer {
 				this.travelDirection = travelDirection;
 			} else {
 				NodeId myId = node.getId();
-				label = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(myId);
+				//label = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(myId);
 				backboneNeighbors = BackboneConfigurationManager.getInstance().loadBackboneNeighbors(myId);
 				this.travelDirection = BackboneConfigurationManager.getInstance().getBackboneDirection(myId);
+				labelClass = getLabelClass(node.getPosition(), travelDirection);
 			}
 		}
 		
@@ -288,8 +289,8 @@ public class EXMacRouting extends NetworkLayer {
 		public void convertToBackbone() {
 			nextBackboneNode = (canIGrowMore()) ? (selectNextNeighbor()) : (node);
 			//System.err.println("CHOOSEN ID for #" + node.getId() + ": " + nextBackboneNode.getId());
-			label = getCorrespondingLabel(node.getPosition(), travelDirection);
-			BackboneConfigurationManager.getInstance().setBackboneNodeLabel(node.getId(), label);
+			labelClass = getLabelClass(node.getPosition(), travelDirection);
+			//BackboneConfigurationManager.getInstance().setBackboneNodeLabel(node.getId(), label);
 			announceConversion(travelDirection);
 		}
 		
@@ -507,6 +508,28 @@ public class EXMacRouting extends NetworkLayer {
 		
 		private boolean isMoreAlignedThan(Position test, Position reference) {
 			return getDistanceFromTarget(test) < getDistanceFromTarget(reference);
+		}
+		
+		private List<Byte> getLabelClass(Position nodePosition, Position travelDirection) {
+			List<Byte> labelClass = new ArrayList<>();
+			if (travelDirection.equals(RIGHT)) {
+				labelClass.add((byte) 5);
+				labelClass.add((byte) 1);
+				labelClass.add((byte) 6);
+			} else if (travelDirection.equals(DOWN)) {
+				labelClass.add((byte) 7);
+				labelClass.add((byte) 2);
+				labelClass.add((byte) 8);
+			} else if (travelDirection.equals(LEFT)) {
+				labelClass.add((byte) 9);
+				labelClass.add((byte) 3);
+				labelClass.add((byte) 10);
+			} else if (travelDirection.equals(UP)) {
+				labelClass.add((byte) 11);
+				labelClass.add((byte) 4);
+				labelClass.add((byte) 12);
+			}
+			return labelClass;
 		}
 		
 		private byte getCorrespondingLabel(Position nodePosition, Position travelDirection) {

@@ -17,7 +17,11 @@ public class Main {
 			//String path = args[0];
 			//args = new String[1];
 			//args[0] = path;
+			
+			
 			//Simulator.main(new String[]{"application_exmac_gerador.xml", "true", "false"});
+			
+			
 			Simulator.main(new String[]{"application_exmac_teste.xml", "false", "true"});
 			//Simulator.main(new String[]{"application_exmac_teste_georouting.xml", "false", "true"});
 			

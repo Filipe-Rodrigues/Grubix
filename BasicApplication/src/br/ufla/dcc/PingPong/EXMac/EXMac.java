@@ -136,6 +136,9 @@ public class EXMac extends MACLayer {
 		}
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();
+//		if (node.getId().asInt() == 755 || node.getId().asInt() == 533) {
+//			System.err.println("#" + node.getId() + ": " + xConf.getCycleSyncTimingRatio());
+//		}
 		// testBackbone();
 	}
 
@@ -256,7 +259,7 @@ public class EXMac extends MACLayer {
 			// System.err.println("FOI");
 			switchToBackbone();
 			if (xConf.getCycleSyncTimingRatio() < 0) {
-				xConf.setCycleSyncTiming(0);
+				xConf.setCycleSyncTiming((double) (SimulationManager.getInstance().getCurrentTime() % 1000) / 1000d);
 				BackboneConfigurationManager.getInstance().setNodeCycleSyncTiming(node.getId(), 0);
 			}
 		}

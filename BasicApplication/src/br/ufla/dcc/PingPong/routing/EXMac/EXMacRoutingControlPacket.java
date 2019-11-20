@@ -20,6 +20,14 @@ public class EXMacRoutingControlPacket extends NetworkPacket {
 		nextSelectedBackbone = nextBackbone;
 	}
 	
+	public EXMacRoutingControlPacket(Address sender, NodeId receiver, Position direction, 
+			Position backboneRoot, NodeId nextBackbone, NodeId prevBackbone) {
+		super(sender, receiver);
+		growthDirection = direction;
+		backboneLineRoot = backboneRoot;
+		nextSelectedBackbone = nextBackbone;
+	}
+	
 	public Position getGrowthDirection() {
 		return growthDirection;
 	}
