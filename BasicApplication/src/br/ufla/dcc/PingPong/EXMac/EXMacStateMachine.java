@@ -227,6 +227,13 @@ public class EXMacStateMachine  {
     			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = CHANNEL_BUSY" );
     		break;
     		
+    		case LOG_LINK:
+    			/* Uma ordem da Log Link Layer para enviar mensagem. Deve-se verificar se o canal está ocupado */
+    			xState.setRetryCSstart(xConf.getMaxBOstarts());
+    			changeState = setNewState(EXMacStateType.CS_START, xConf.getStepsCS(), EXMacActionType.ASK_CHANNEL);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS, Event = LOG_LINK" );
+        	break;
+    		
     		case RTS_RECEIVED:
     			/* Se recebeu uma mensagem RTS durante o CS_END, 
         		 * responda como se fosse um CS e tente iniciar envio mais tarde  */

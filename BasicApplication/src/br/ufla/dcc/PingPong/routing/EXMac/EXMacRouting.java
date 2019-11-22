@@ -250,14 +250,14 @@ public class EXMacRouting extends NetworkLayer {
 		private final double MAX_Y = Configuration.getInstance().getYSize();
 		private final double MEAN_HOP_DISTANCE = 35.64d;
 		private final double MEAN_PREAMBLE_COUNT_NORMAL = 24;
-		private final double MEAN_PREAMBLE_COUNT_BACKBONE = 8;
+		private final double MEAN_PREAMBLE_COUNT_BACKBONE = 5;
 		
 
 		/** Caso eu seja um nó backbone, esta é a direção da minha viagem */
 		private Position travelDirection;
 		
 		/** Caso eu seja um nó Backbone, este é meu identificador de segmento */
-		private List<Byte> labelClass;
+		private byte label;
 
 		private HeuristicA() {
 		}
@@ -267,10 +267,10 @@ public class EXMacRouting extends NetworkLayer {
 				this.travelDirection = travelDirection;
 			} else {
 				NodeId myId = node.getId();
-				//label = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(myId);
+				label = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(myId);
 				backboneNeighbors = BackboneConfigurationManager.getInstance().loadBackboneNeighbors(myId);
 				this.travelDirection = BackboneConfigurationManager.getInstance().getBackboneDirection(myId);
-				labelClass = getLabelClass(node.getPosition(), travelDirection);
+				//label = getCorrespondingLabel(node.getPosition(), travelDirection);
 			}
 		}
 		
@@ -289,8 +289,8 @@ public class EXMacRouting extends NetworkLayer {
 		public void convertToBackbone() {
 			nextBackboneNode = (canIGrowMore()) ? (selectNextNeighbor()) : (node);
 			//System.err.println("CHOOSEN ID for #" + node.getId() + ": " + nextBackboneNode.getId());
-			labelClass = getLabelClass(node.getPosition(), travelDirection);
-			//BackboneConfigurationManager.getInstance().setBackboneNodeLabel(node.getId(), label);
+			label = getCorrespondingLabel(node.getPosition(), travelDirection);
+			BackboneConfigurationManager.getInstance().setBackboneNodeLabel(node.getId(), label);
 			announceConversion(travelDirection);
 		}
 		
@@ -348,7 +348,7 @@ public class EXMacRouting extends NetworkLayer {
 				if (amIBackbone()) {
 					NodeId nextBBNode = nextBackboneNode.getId();
 					byte neighLabel = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(nextBBNode);
-					if (neighLabel == backboneSegment) {
+					if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 						intermediatePaths.poll();
 						sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
 						sentMessage = true;
@@ -357,7 +357,7 @@ public class EXMacRouting extends NetworkLayer {
 				if (!sentMessage && !backboneNeighbors.isEmpty()) {
 					for (NodeId neighbor : backboneNeighbors) {
 						byte neighLabel = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(neighbor);
-						if (neighLabel == backboneSegment) {
+						if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 							//System.err.println("FOUND BACKBONE BRANCH: ");
 							intermediatePaths.poll();
 							sendEXMacRoutingPacket(packet, neighbor, intermediatePaths);
@@ -510,26 +510,17 @@ public class EXMacRouting extends NetworkLayer {
 			return getDistanceFromTarget(test) < getDistanceFromTarget(reference);
 		}
 		
-		private List<Byte> getLabelClass(Position nodePosition, Position travelDirection) {
-			List<Byte> labelClass = new ArrayList<>();
+		private boolean checkLabelClassCompatibility(byte label, Position travelDirection) {
 			if (travelDirection.equals(RIGHT)) {
-				labelClass.add((byte) 5);
-				labelClass.add((byte) 1);
-				labelClass.add((byte) 6);
+				return (label == 5 || label == 1 || label == 6);
 			} else if (travelDirection.equals(DOWN)) {
-				labelClass.add((byte) 7);
-				labelClass.add((byte) 2);
-				labelClass.add((byte) 8);
+				return (label == 7 || label == 2 || label == 8);
 			} else if (travelDirection.equals(LEFT)) {
-				labelClass.add((byte) 9);
-				labelClass.add((byte) 3);
-				labelClass.add((byte) 10);
+				return (label == 9 || label == 3 || label == 10);
 			} else if (travelDirection.equals(UP)) {
-				labelClass.add((byte) 11);
-				labelClass.add((byte) 4);
-				labelClass.add((byte) 12);
+				return (label == 11 || label == 4 || label == 12);
 			}
-			return labelClass;
+			return false;
 		}
 		
 		private byte getCorrespondingLabel(Position nodePosition, Position travelDirection) {
