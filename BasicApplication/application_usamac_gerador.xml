@@ -21,20 +21,22 @@
     <node name="REGULAR" count="1500">
         <layers>
         	<application>
-                <class>br.ufla.dcc.PingPong.node.EXMacRegularNodeList</class>
-                
+                <class>br.ufla.dcc.PingPong.node.USAMacRegularNode</class>
+                <params>
+                    <param name="testingMode">false</param>
+                </params>
             </application>
             <operatingSystem>
                 <class>br.ufla.dcc.grubix.simulator.node.user.os.NullOperatingSystemLayer</class>
             </operatingSystem>
             <network>
-                <class>br.ufla.dcc.PingPong.routing.GeoRouting</class>
+                <class>br.ufla.dcc.PingPong.routing.USAMac.USAMacRouting</class>
             </network>
             <logLink>
                 <class>br.ufla.dcc.PingPong.Llc.LogLinkControl</class>
             </logLink>
             <mac>
-                <class>br.ufla.dcc.PingPong.XMac2019.XMac</class>
+                <class>br.ufla.dcc.PingPong.USAMac.USAMac</class>
                 <params>
                     <param name="cycleTime">0.1</param>
                     <param name="ackRequested">false</param>
@@ -76,16 +78,16 @@
         <generator>
             <!-- Define a posição dos nós informados baseado nos parametros -->
             <!--<class>br.ufla.dcc.PingPong.PaxMac.PaxRandomStartPositions</class>-->
-            <class>br.ufla.dcc.PingPong.movement.FromConfigStartPositions</class>
-            <!--<class>br.ufla.dcc.PingPong.movement.EXMacRandomStartPositions</class>-->
+            <!--<class>br.ufla.dcc.PingPong.movement.FromConfigStartPositions</class>-->
+            <class>br.ufla.dcc.PingPong.movement.EXMacRandomStartPositions</class>
             <!--<class>br.ufla.dcc.grubix.simulator.movement.GridPositionGenerator</class>-->
             <params>
             	<!-- SOMENTE PARA GridPositionGenerator-->
             	<!--<param name="xNodeDistance">20</param>-->
             	<!--<param name="yNodeDistance">20</param>-->
                 <!-- SOMENTE PARA EXMacRandomStartPositions -->
-                <!--<param name="testingCase">1</param>-->
-                <!--<param name="forceCenterNodes">true</param>-->
+                <param name="testingCase">1</param>
+                <param name="forceCenterNodes">true</param>
             </params>
         </generator>
         <targetfile>startpositions.xml</targetfile>

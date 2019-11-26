@@ -15,7 +15,7 @@ import br.ufla.dcc.grubix.simulator.node.ApplicationLayer;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
 /** Classe que define a aplicação */
-public class EXMacRegularNodeList extends ApplicationLayer {
+public class USAMacRegularNodeList extends ApplicationLayer {
 
 	private static final boolean LIST_MODE = true;
 	

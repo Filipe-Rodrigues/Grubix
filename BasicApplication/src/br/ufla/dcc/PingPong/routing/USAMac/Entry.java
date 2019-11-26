@@ -1,4 +1,4 @@
-package br.ufla.dcc.PingPong.routing.EXMac;
+package br.ufla.dcc.PingPong.routing.USAMac;
 
 public class Entry<L extends Comparable<L>, R> implements Comparable<Entry<L, R>> {
 

@@ -1,5 +1,3 @@
-import javax.swing.JOptionPane;
-
 import br.ufla.dcc.grubix.simulator.kernel.Simulator;
 
 
@@ -19,11 +17,11 @@ public class Main {
 			//args[0] = path;
 			
 			
-			//Simulator.main(new String[]{"application_exmac_gerador.xml", "true", "false"});
+			//Simulator.main(new String[]{"application_usamac_gerador.xml", "true", "false"});
 			
 			
-			Simulator.main(new String[]{"application_exmac_teste.xml", "false", "true"});
-			//Simulator.main(new String[]{"application_exmac_teste_georouting.xml", "false", "true"});
+			Simulator.main(new String[]{"application_usamac_teste.xml", "false", "true"});
+			//Simulator.main(new String[]{"application_usamac_teste_georouting.xml", "false", "true"});
 			
 			long endTime   = System.currentTimeMillis();
 			long totalTime = endTime - startTime;

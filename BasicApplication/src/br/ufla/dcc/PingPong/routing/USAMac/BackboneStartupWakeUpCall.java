@@ -1,4 +1,4 @@
-package br.ufla.dcc.PingPong.routing.EXMac;
+package br.ufla.dcc.PingPong.routing.USAMac;
 
 import br.ufla.dcc.grubix.simulator.Address;
 import br.ufla.dcc.grubix.simulator.Position;

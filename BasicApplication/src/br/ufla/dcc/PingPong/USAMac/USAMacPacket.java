@@ -16,7 +16,7 @@ Fifth Floor, Boston, MA 02110-1301, USA
 Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 ********************************************************************************/
 
-package br.ufla.dcc.PingPong.EXMac;
+package br.ufla.dcc.PingPong.USAMac;
 
 import br.ufla.dcc.grubix.simulator.Address;
 import br.ufla.dcc.grubix.simulator.NodeId;
@@ -29,23 +29,21 @@ import br.ufla.dcc.grubix.simulator.event.LogLinkPacket;
  *  @author João Giacomin
  *  @version 18/03/2019
  */
-public class EXMacPacket extends MACPacket { 
-	
-	private double cycleTimeShift;
+public class USAMacPacket extends MACPacket { 
+				
 	
 	/**
-	 * Default constructor of class EXMacPacket to create a terminal packet
+	 * Default constructor of class XMacPacket to create a terminal packet
 	 * with no enclosed packet.
 	 * @param sender Sender address of the packet
 	 * @param receiver Id of the packet's receiver
 	 * @param signalStrength The strength of the signal to transmit in mW
 	 * @param pkType The type of MACPacket (RTS, CTS, ACK)
 	 */
-	public EXMacPacket(Address sender, NodeId receiver, PacketType pkType, double signalStrength) {
+	public USAMacPacket(Address sender, NodeId receiver, PacketType pkType, double signalStrength) {
 		// Usado para criar pacotes do tipo RTS, CTS e ACK
 		super(sender, receiver, signalStrength);
 		setType(pkType);
-		cycleTimeShift = -1;
 	}
 	
 	
@@ -57,28 +55,13 @@ public class EXMacPacket extends MACPacket {
 	 * @param sender Sender address of the packet
 	 * @param packet The packet to enclose inside the new packet.
 	 */
-	public EXMacPacket(Address sender, LogLinkPacket packet, boolean ackReq, double cycleTimeShift) {
+	public USAMacPacket(Address sender, LogLinkPacket packet, boolean ackReq) {
 		// Usado para criar apenas pacotes do tipo DATA
 		super(sender, packet);
 		setType(PacketType.DATA);
 		setAckRequested(ackReq);
-		cycleTimeShift = -1;
 	}
 	
-	/**
-	 * Overloaded constructor of class EXMacPacket to create a terminal packet
-	 * with no enclosed packet.
-	 * @param sender Sender address of the packet
-	 * @param receiver Id of the packet's receiver
-	 * @param signalStrength The strength of the signal to transmit in mW
-	 * @param pkType The type of MACPacket (RTS, CTS, ACK)
-	 */
-	public EXMacPacket(Address sender, NodeId receiver, PacketType pkType, double signalStrength, double cycleTimeShift) {
-		// Usado para criar pacotes do tipo RTS, CTS e ACK
-		super(sender, receiver, signalStrength);
-		setType(pkType);
-		this.cycleTimeShift = cycleTimeShift;
-	}
 
 	/** Decrementa o contador de tentativas de envio de pacote existente na superclasse MACPacket.java */
 	public int decRetryCount() {

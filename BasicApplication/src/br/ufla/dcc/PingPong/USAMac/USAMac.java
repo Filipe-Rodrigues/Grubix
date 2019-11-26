@@ -16,27 +16,33 @@ Fifth Floor, Boston, MA 02110-1301, USA
 Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
  ********************************************************************************/
 
-package br.ufla.dcc.PingPong.EXMac;
+package br.ufla.dcc.PingPong.USAMac;
 
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.Direction;
+import br.ufla.dcc.grubix.simulator.LayerType;
 import br.ufla.dcc.grubix.simulator.event.CrossLayerEvent;
 import br.ufla.dcc.grubix.simulator.event.LogLinkPacket;
+import br.ufla.dcc.grubix.simulator.event.MACPacket;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
 import br.ufla.dcc.grubix.simulator.event.Packet;
 import br.ufla.dcc.grubix.simulator.event.SendingTerminated;
 import br.ufla.dcc.grubix.simulator.event.StartSimulation;
 import br.ufla.dcc.grubix.simulator.event.WakeUpCall;
+import br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
+import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 import br.ufla.dcc.grubix.simulator.node.Link;
 import br.ufla.dcc.grubix.simulator.node.MACLayer;
 import br.ufla.dcc.grubix.simulator.node.MACState;
-import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacEventType;
-import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacStateType;
+import br.ufla.dcc.PingPong.ToolsMiscellaneous;
+import br.ufla.dcc.PingPong.USAMac.USAMacState.USAMacEventType;
+import br.ufla.dcc.PingPong.USAMac.USAMacState.USAMacStateType;
 import br.ufla.dcc.PingPong.physicalX.EventCarrierSense;
 import br.ufla.dcc.PingPong.physicalX.EventCollisionDetect;
 import br.ufla.dcc.PingPong.physicalX.EventPhyTurnRadio;
 import br.ufla.dcc.PingPong.physicalX.StartOfFrameDelimiter;
+import br.ufla.dcc.PingPong.routing.USAMac.USAMacRoutingControlPacket;
 import br.ufla.dcc.grubix.xml.ConfigurationException;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
@@ -60,7 +66,7 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
  * @version 18/03/2019
  */
 
-public class EXMac extends MACLayer {
+public class USAMac extends MACLayer {
 
 	/** Tempo de ciclo em segundos (obrigatório estar aqui) */
 	@ShoXParameter(description = " Tempo de Ciclo em segundos")
@@ -71,13 +77,13 @@ public class EXMac extends MACLayer {
 	private boolean ackRequested;
 
 	/** Objeto responsável pela mudança do estado do XMac */
-	private EXMacStateMachine xStateMachine;
+	private USAMacStateMachine xStateMachine;
 
 	/** Objeto que contém todas as variáveis de configuração do XMac */
-	private EXMacConfiguration xConf;
+	private USAMacConfiguration xConf;
 
 	/** Objeto que armazenas as informações de estados do XMac */
-	private EXMacState xState;
+	private USAMacState xState;
 
 	/**
 	 * The internal state of the MAC that can be modified from outside. Apenas para
@@ -87,6 +93,9 @@ public class EXMac extends MACLayer {
 
 	/** Ativa funções de depuração */
 	private boolean debug = false;
+
+	/** Ferramenta para o VisualGrubix */
+	private ToolsMiscellaneous misc = ToolsMiscellaneous.getInstance();
 
 	/**
 	 * Função padrão do Grubix para fazer a configuração do objeto
@@ -106,13 +115,13 @@ public class EXMac extends MACLayer {
 
 		// Define o estado inicial do MAC em SLEEP e o contador de sequência de estados
 		// em zero.
-		xState = new EXMacState(EXMacStateType.SLEEP, 0);
+		xState = new USAMacState(USAMacStateType.SLEEP, 0);
 
 		// Inicializa as variáveis de configuração
-		xConf = new EXMacConfiguration(cycleTime, ackRequested);
+		xConf = new USAMacConfiguration(cycleTime, ackRequested);
 
 		// Cria a instância da máquina de estados
-		xStateMachine = new EXMacStateMachine(sender, xState, xConf);
+		xStateMachine = new USAMacStateMachine(sender, xState, xConf);
 	}
 
 	/**
@@ -121,8 +130,25 @@ public class EXMac extends MACLayer {
 	 */
 	protected void processEvent(StartSimulation start) {
 		// Define o novo estado e duração, e incrementa a sequência de estado
+		if (BackboneConfigurationManager.getInstance().amIBackbone(node.getId())) {
+			switchToBackbone();
+			xConf.setCycleSyncTiming(BackboneConfigurationManager.getInstance().getNodeCycleSyncTiming(node.getId()));
+		}
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();
+//		if (node.getId().asInt() == 755 || node.getId().asInt() == 533) {
+//			System.err.println("#" + node.getId() + ": " + xConf.getCycleSyncTimingRatio());
+//		}
+		// testBackbone();
+	}
+
+	private boolean switchToBackbone() {
+		if (!xConf.isBackboneNode()) {
+			xConf.setBackboneState(true);
+			misc.vGrubix(node.getId(), "Backbone", "DARK_BLUE");
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -134,20 +160,20 @@ public class EXMac extends MACLayer {
 	 */
 	public final void processWakeUpCall(WakeUpCall wuc) {
 
-		EXMacEventType event = EXMacEventType.VOID;
+		USAMacEventType event = USAMacEventType.VOID;
 		// Tratamento de evento de fim de marcação de tempo
-		if (wuc instanceof EXMacWucTimeOut) {
+		if (wuc instanceof USAMacWucTimeOut) {
 
 			/*
 			 * Verifica se o número do estado armazeno no WUC é o mesmo do estado atual. Se
 			 * não for, já houve mudança no estado do XMac antes do término do WUC, portanto
 			 * esse WUC deve ser ignorado, já que não é mais válido.
 			 */
-			if (xState.getStateSeqNum() != ((EXMacWucTimeOut) wuc).getStateNumber()) {
+			if (xState.getStateSeqNum() != ((USAMacWucTimeOut) wuc).getStateNumber()) {
 				return;
 			}
-			// xState.setEvent(EXMacEventType.TIME_OUT);
-			event = EXMacEventType.TIME_OUT;
+			// xState.setEvent(XMacEventType.TIME_OUT);
+			event = USAMacEventType.TIME_OUT;
 		}
 
 		// Tratamento dos eventos emitidos pela PHY.
@@ -158,24 +184,24 @@ public class EXMac extends MACLayer {
 				// Recebe evento da PHY informando se o canal está ocupado
 				if (((EventCarrierSense) cle).isChannelBusy()) {
 					xState.setChannelBusy(true);
-					event = EXMacEventType.CHANNEL_BUSY;
+					event = USAMacEventType.CHANNEL_BUSY;
 				} else {
 					xState.setChannelBusy(false);
-					event = EXMacEventType.CHANNEL_FREE;
+					event = USAMacEventType.CHANNEL_FREE;
 				}
 			}
 
 			// A seguir somente serão permitidos eventos que carregam pacotes do tipo
 			// XMacPacket
-			else if (!(cle.getPacket() instanceof EXMacPacket)) {
+			else if (!(cle.getPacket() instanceof USAMacPacket)) {
 				return;
 			}
 
-			EXMacPacket packet = (EXMacPacket) cle.getPacket();
+			USAMacPacket packet = (USAMacPacket) cle.getPacket();
 
 			// Recebe evento da PHY quando uma mensagem é completamente enviada.
 			if (cle instanceof SendingTerminated) {
-				event = EXMacEventType.MSG_SENT;
+				event = USAMacEventType.MSG_SENT;
 				if (debug)
 					System.out.println(
 							"MAC: " + this.id + ", Event = SendingTerminated - pack type = " + packet.getType());
@@ -185,7 +211,7 @@ public class EXMac extends MACLayer {
 			if (cle instanceof EventCollisionDetect) {
 				// vou manter esta função para debug. Não tem como a PHY saber que houve
 				// colisão, apenas erro de CRC.
-				event = EXMacEventType.COLLISION;
+				event = USAMacEventType.COLLISION;
 				if (debug)
 					System.out.println("MAC: " + this.id + ", Colisão informada pela PHY");
 			}
@@ -194,13 +220,13 @@ public class EXMac extends MACLayer {
 			if (cle instanceof StartOfFrameDelimiter) {
 				// O rádio indica que identificou o início de uma mensagem (Start of Frame
 				// Delimiter)
-				event = EXMacEventType.SFD;
+				event = USAMacEventType.SFD;
 			}
 
 		} // Fim de tratamento dos eventos emitidos pela PHY.
 
 		// SFD e COLLISION não serão tratados por enquanto
-		if (event == EXMacEventType.COLLISION || event == EXMacEventType.SFD)
+		if (event == USAMacEventType.COLLISION || event == USAMacEventType.SFD)
 			return;
 
 		// Chamar a função que busca o novo estado, conforme o evento observado, e
@@ -217,7 +243,7 @@ public class EXMac extends MACLayer {
 	public final void upperSAP(Packet llPacket) {
 
 		if (this.node.getId().asInt() == -1) {
-			System.out.println("\n  +  Este é o X-MAC 2019  +\n");
+			System.out.println("\n  +  Este é o EX-MAC 2019  +\n");
 			xConf.imprimeParametros();
 		}
 
@@ -229,9 +255,18 @@ public class EXMac extends MACLayer {
 			return;
 		}
 
+		if (llPacket.getEnclosedPacket() instanceof USAMacRoutingControlPacket) {
+			// System.err.println("FOI");
+			switchToBackbone();
+			if (xConf.getCycleSyncTimingRatio() < 0) {
+				xConf.setCycleSyncTiming((double) (SimulationManager.getInstance().getCurrentTime() % 1000) / 1000d);
+				BackboneConfigurationManager.getInstance().setNodeCycleSyncTiming(node.getId(), 0);
+			}
+		}
+
 		startSendDataProcess(llPacket);
 
-		gotoNextState(EXMacEventType.LOG_LINK);
+		gotoNextState(USAMacEventType.LOG_LINK);
 
 	}
 
@@ -242,7 +277,7 @@ public class EXMac extends MACLayer {
 	 */
 	public final void lowerSAP(Packet packet) {
 
-		if (!(packet instanceof EXMacPacket)) {
+		if (!(packet instanceof USAMacPacket)) {
 			return;
 		}
 
@@ -250,30 +285,40 @@ public class EXMac extends MACLayer {
 		if (packet.getSender().getId() == getNode().getId())
 			return;
 
-		EXMacPacket xPack = (EXMacPacket) packet;
+		if (packet instanceof USAMacBackbonePacket) {
+			USAMacBackbonePacket bbPacket = (USAMacBackbonePacket) packet;
+			NodeId nextBB = bbPacket.getNextBackboneTarget();
+			if (node.getId().equals(nextBB)) {
+				double cycleShiftRatio = bbPacket.getParentBackboneCycleShiftRatio();
+				xConf.updateCycleSyncTiming(cycleShiftRatio);
+				BackboneConfigurationManager.getInstance().setNodeCycleSyncTiming(node.getId(), xConf.getCycleSyncTimingRatio());
+			}
+		}
+
+		USAMacPacket xPack = (USAMacPacket) packet;
 		xState.setRecPkt(xPack);
 
 		if (debug)
 			System.out.println("MAC: " + this.id + ", Pacote tipo " + xPack.getType() + " recebido de "
 					+ xPack.getSender().getId());
 
-		EXMacEventType event;
+		USAMacEventType event;
 
 		switch (xPack.getType()) {
 		case RTS:
-			event = EXMacEventType.RTS_RECEIVED;
+			event = USAMacEventType.RTS_RECEIVED;
 			break;
 		case CTS:
-			event = EXMacEventType.CTS_RECEIVED;
+			event = USAMacEventType.CTS_RECEIVED;
 			break;
 		case ACK:
-			event = EXMacEventType.ACK_RECEIVED;
+			event = USAMacEventType.ACK_RECEIVED;
 			break;
 		case DATA:
-			event = EXMacEventType.DATA_RECEIVED;
+			event = USAMacEventType.DATA_RECEIVED;
 			break;
 		default:
-			event = EXMacEventType.VOID;
+			event = USAMacEventType.VOID;
 		}
 
 		gotoNextState(event);
@@ -283,7 +328,7 @@ public class EXMac extends MACLayer {
 	 * Função para chamar a XMacStateMachine, para decidir o próximo estado, e
 	 * executar próximas ações
 	 */
-	private void gotoNextState(EXMacEventType event) {
+	private void gotoNextState(USAMacEventType event) {
 
 		/* Chama a State Machine para decidir qual será o próximo estado */
 		if (xStateMachine.changeState(event)) {
@@ -324,6 +369,12 @@ public class EXMac extends MACLayer {
 			/* Manda desligar o rádio - estado OFF */
 			sendEventDown(new EventPhyTurnRadio(this.sender, false));
 			break;
+			
+		case TURN_OFF_CS_END:
+			/* Manda desligar o rádio - estado OFF */
+			sendEventDown(new EventPhyTurnRadio(this.sender, false));
+			sendEventTo(new EventFinishedCSEnd(sender), LayerType.NETWORK);
+			break;
 
 		case START_RTS:
 			/* Preparar o início de envio de preâmbulos */
@@ -331,7 +382,7 @@ public class EXMac extends MACLayer {
 				// Rádio pode estar SENDING
 				System.out.println("MAC: " + this.id + ", gotoNextState - falhou envio de MSG, rádio ocupado ");
 			} else {
-				sendXMacPacket(EXMacStateType.SENDING_RTS);
+				sendXMacPacket(USAMacStateType.SENDING_RTS);
 			}
 			if (debug)
 				System.out.println("MAC: " + this.id + ", Event = " + event + ", Action = START_RTS, next State = "
@@ -394,7 +445,7 @@ public class EXMac extends MACLayer {
 		xState.setReceiverNode(llpack.getReceiver());
 
 		// Cria o pacote de DATA da camada MAC para ser enviado depois dos preâmbulos.
-		EXMacPacket newDATApacket = createDataPacket(llpack, xConf.isACKrequested());
+		USAMacPacket newDATApacket = createDataPacket(llpack, xConf.isACKrequested());
 
 		// Armazena o pacote que será enviado
 		xState.setDataPkt(newDATApacket);
@@ -439,7 +490,7 @@ public class EXMac extends MACLayer {
 		 * Cria um pacote de preâmbulo (RTS) para ser enviado após CS_START. Guarda o
 		 * RTS no XMacState.
 		 */
-		EXMacPacket newRtsPacket = createCtrlPacket(xState.getReceiverNode(), PacketType.RTS, xConf.getMaxPreambles(),
+		USAMacPacket newRtsPacket = createCtrlPacket(xState.getReceiverNode(), PacketType.RTS, xConf.getMaxPreambles(),
 				(xState.getReceiverNode() != NodeId.ALLNODES), xConf.getLengthRTS(), xConf.getSignalStrength());
 
 		xState.setRtsPkt(newRtsPacket);
@@ -453,9 +504,9 @@ public class EXMac extends MACLayer {
 	/**
 	 * Função para enviar o pacote
 	 */
-	private PacketType sendXMacPacket(EXMacStateType stateType) {
+	private PacketType sendXMacPacket(USAMacStateType stateType) {
 
-		EXMacPacket packet = null;
+		USAMacPacket packet = null;
 
 		switch (stateType) {
 
@@ -495,16 +546,16 @@ public class EXMac extends MACLayer {
 	 * Função que cria um WUC do tipo WucTimeOut definindo a duração do novo estado
 	 * e operação do rádio.
 	 */
-	EXMacWucTimeOut createtWucTimeOut() {
-		EXMacWucTimeOut wuc = new EXMacWucTimeOut(sender, xState.getStateDuration(), xState.getStateSeqNum());
+	USAMacWucTimeOut createtWucTimeOut() {
+		USAMacWucTimeOut wuc = new USAMacWucTimeOut(sender, xState.getStateDuration(), xState.getStateSeqNum());
 		sendEventSelf(wuc);
 		return wuc;
 	}
 
 	/** Função para criar pacotes de controle (RTS, CTS, ACK) */
-	private EXMacPacket createCtrlPacket(NodeId receiver, PacketType type, int retryCount, boolean ACKreq,
+	private USAMacPacket createCtrlPacket(NodeId receiver, PacketType type, int retryCount, boolean ACKreq,
 			int headerLength, double signalStrength) {
-		EXMacPacket newPack = new EXMacPacket(this.sender, receiver, type, signalStrength);
+		USAMacPacket newPack = new USAMacPacket(this.sender, receiver, type, signalStrength);
 		// Tamanho do pacote em bits
 		newPack.setHeaderLength(headerLength);
 		// Número de tentativas de estabelecer comunicação
@@ -513,8 +564,14 @@ public class EXMac extends MACLayer {
 	}
 
 	/** Função para criar pacotes do tipo DATA */
-	private EXMacPacket createDataPacket(LogLinkPacket packet, boolean ACKreq) {
-		EXMacPacket newPacket = new EXMacPacket(this.sender, packet, ACKreq);
+	private USAMacPacket createDataPacket(LogLinkPacket packet, boolean ACKreq) {
+		USAMacPacket newPacket;
+		if (BackboneConfigurationManager.getInstance().amIBackbone(node.getId())) {
+			NodeId nextBB = BackboneConfigurationManager.getInstance().getNextBackboneNode(node.getId());
+			newPacket = new USAMacBackbonePacket(this.sender, packet, ACKreq, nextBB, xConf.getCycleSyncTimingRatio());
+		} else {
+			newPacket = new USAMacPacket(this.sender, packet, ACKreq);
+		}
 		// Tamanho do pacote em bits
 		newPacket.setHeaderLength(xConf.getLengthDATA());
 		// Número de tentativas para enviar DATA

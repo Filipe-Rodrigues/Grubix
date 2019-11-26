@@ -1,4 +1,4 @@
-package br.ufla.dcc.PingPong.routing.EXMac;
+package br.ufla.dcc.PingPong.routing.USAMac;
 
 import java.util.Queue;
 
@@ -7,11 +7,11 @@ import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.NetworkPacket;
 import br.ufla.dcc.grubix.simulator.event.Packet;
 
-public class EXMacRoutingPacket extends NetworkPacket {
+public class USAMacRoutingPacket extends NetworkPacket {
 
 	private Queue<Byte> backboneSegmentPath;
 	
-	public EXMacRoutingPacket(Address sender, NodeId receiver, Packet packet, Queue<Byte> backbonePath) {
+	public USAMacRoutingPacket(Address sender, NodeId receiver, Packet packet, Queue<Byte> backbonePath) {
 		super(sender, receiver, packet);
 		backboneSegmentPath = backbonePath;
 	}

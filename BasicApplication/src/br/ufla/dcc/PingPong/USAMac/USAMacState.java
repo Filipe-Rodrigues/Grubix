@@ -17,7 +17,7 @@ Fifth Floor, Boston, MA 02110-1301, USA
 Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 ********************************************************************************/
 
-package br.ufla.dcc.PingPong.EXMac;
+package br.ufla.dcc.PingPong.USAMac;
 
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.LayerState;
@@ -33,10 +33,10 @@ import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
  *  @version 18/03/2019
  *
  */
-public class EXMacState extends LayerState {
+public class USAMacState extends LayerState {
 	
 	/** O estado atual */
-	private EXMacStateType state;
+	private USAMacStateType state;
 	
 	/** Sequência atual de estados */
 	private int stateSeqNum = 0;
@@ -45,16 +45,16 @@ public class EXMacState extends LayerState {
 	private double stateDuration;
 	
 	/** Próxima ação a ser executada pela XMac.java  */
-	private EXMacActionType action;  
+	private USAMacActionType action;  
 	
 	/** Pacote de dados que será enviado */
-	private EXMacPacket dataPkt;
+	private USAMacPacket dataPkt;
 	
 	/** Pacote RTS que será enviado */
-	private EXMacPacket rtsPkt;
+	private USAMacPacket rtsPkt;
 	
 	/** Pacote recebido na LowerSAP */
-	private EXMacPacket recPkt;
+	private USAMacPacket recPkt;
 	
 	/** O endereço do nó para o qual vai a próxima mensagem */
 	private NodeId receiverNode;
@@ -67,10 +67,13 @@ public class EXMacState extends LayerState {
     
     /** Indica que há mensagem de dados a ser enviada. Usado quando termina o tempo de Sleep */
     private boolean dataPending;
+    
+    /** Flag que controla se o nó espera um DATA de um BroadCast */
+    private boolean waitingBroadcast;
  
     
 	/** Default constructor */
-	public EXMacState(EXMacStateType state, int seq) {
+	public USAMacState(USAMacStateType state, int seq) {
 		this.state  = state;
 		this.stateSeqNum = seq;
 	}
@@ -78,7 +81,7 @@ public class EXMacState extends LayerState {
 
 	/** Função para atribuir novo estado a XmacState, 
 	 *  marcando o tempo máximo de permanência no estado */
-	public boolean setState(EXMacStateType newState, double delay) {
+	public boolean setState(USAMacStateType newState, double delay) {
 		this.stateDuration = delay;
 		this.state = newState;
 		this.stateSeqNum++;           
@@ -102,7 +105,7 @@ public class EXMacState extends LayerState {
 	 * Gets e Sets
 	 */
     
-	public EXMacStateType getState() {
+	public USAMacStateType getState() {
 		return state;
 	}
 	
@@ -122,19 +125,19 @@ public class EXMacState extends LayerState {
 		this.stateDuration = stateDuration;
 	}
 
-	public EXMacPacket getDataPkt() {
+	public USAMacPacket getDataPkt() {
 		return dataPkt;
 	}
 
-	public void setDataPkt(EXMacPacket dataPkt) {
+	public void setDataPkt(USAMacPacket dataPkt) {
 		this.dataPkt = dataPkt;
 	}
 	
-	public EXMacPacket getRtsPkt() {
+	public USAMacPacket getRtsPkt() {
 		return rtsPkt;
 	}
 
-	public void setRtsPkt(EXMacPacket rtsPkt) {
+	public void setRtsPkt(USAMacPacket rtsPkt) {
 		this.rtsPkt = rtsPkt;
 	}
 	
@@ -166,19 +169,19 @@ public class EXMacState extends LayerState {
 		this.retryCSstart = retry;
 	}
 
-	public EXMacPacket getRecPkt() {
+	public USAMacPacket getRecPkt() {
 		return recPkt;
 	}
 
-	public void setRecPkt(EXMacPacket recPkt) {
+	public void setRecPkt(USAMacPacket recPkt) {
 		this.recPkt = recPkt;
 	}
 
-	public EXMacActionType getAction() {
+	public USAMacActionType getAction() {
 		return action;
 	}
 
-	public void setAction(EXMacActionType action) {
+	public void setAction(USAMacActionType action) {
 		this.action = action;
 	}
 
@@ -189,12 +192,21 @@ public class EXMacState extends LayerState {
 	public void setDataPending(boolean dataPending) {
 		this.dataPending = dataPending;
 	}
+	
+	public boolean isWaitingBroadcast() {
+		return waitingBroadcast;
+	}
 
+
+	public void setWaitingBroadcast(boolean waitingBroadcast) {
+		this.waitingBroadcast = waitingBroadcast;
+	}
 
 	/* 
 	 * Enumerations
 	 */
- 
+
+
 	/**
 	 * Esse enum implementa os possiveis estados da MAC de um nó sensor, que utiliza X_MAC. 
 	 * 
@@ -203,7 +215,7 @@ public class EXMacState extends LayerState {
 	 * Usado pela XMac.java e XMacStateMachine.java 
 	 */
 
-	public enum EXMacStateType {
+	public enum USAMacStateType {
 		/** Estado inativo, corresponde ao estado em que o rádio e as principais funções do nó estão desligados */
 		SLEEP,
 		
@@ -248,7 +260,7 @@ public class EXMacState extends LayerState {
 	 * 
 	 * Usado pela XMacStateMachine.java para indicar ações para a XMac.java
 	 */
-	public enum EXMacActionType {
+	public enum USAMacActionType {
 		
 		/** Não há nada a fazer */
 		CONTINUE,
@@ -268,6 +280,9 @@ public class EXMacState extends LayerState {
 		/** Ordenar o rádio para desligar. */
 		TURN_OFF,
 		
+		/** Ordenar o rádio para desligar e enviar CrossLayerEvent. */
+		TURN_OFF_CS_END,
+		
 		/** Pergutar ao rádio se o canal está ocupado */
 		ASK_CHANNEL
 	}
@@ -278,7 +293,7 @@ public class EXMacState extends LayerState {
 	 * Cada evento recebido pela XMac.java levará a um chamado à XMacStateMachine.java 
 	 * para indicar o próximo estado.
 	 */
-	public enum EXMacEventType {
+	public enum USAMacEventType {
 		
 		/** Time Out */
 		TIME_OUT,

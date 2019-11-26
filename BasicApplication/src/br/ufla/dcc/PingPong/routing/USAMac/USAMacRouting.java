@@ -1,9 +1,9 @@
-package br.ufla.dcc.PingPong.routing.EXMac;
+package br.ufla.dcc.PingPong.routing.USAMac;
 
-import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.DOWN;
-import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.LEFT;
-import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.RIGHT;
-import static br.ufla.dcc.PingPong.routing.EXMac.AuxiliarConstants.UP;
+import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.DOWN;
+import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.LEFT;
+import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.RIGHT;
+import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.UP;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Queue;
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
-import br.ufla.dcc.PingPong.EXMac.EventFinishedCSEnd;
+import br.ufla.dcc.PingPong.USAMac.EventFinishedCSEnd;
 import br.ufla.dcc.PingPong.movement.FromConfigStartPositions;
 import br.ufla.dcc.PingPong.routing.GeoRoutingPacket;
 import br.ufla.dcc.grubix.simulator.LayerException;
@@ -30,7 +30,7 @@ import br.ufla.dcc.grubix.simulator.node.NetworkLayer;
 import br.ufla.dcc.grubix.simulator.node.Node;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
-public class EXMacRouting extends NetworkLayer {
+public class USAMacRouting extends NetworkLayer {
 
 	/** Objeto para a depuração */
 	ToolsDebug debug = ToolsDebug.getInstance();
@@ -48,7 +48,7 @@ public class EXMacRouting extends NetworkLayer {
 	/** Objeto de invocação do gerador de backbones */
 	private EXMacBackboneGenerator generator;
 
-	public EXMacRouting() {
+	public USAMacRouting() {
 		backboneNeighbors = new ArrayList<>();
 		packetQueue = new LinkedList<Pair<Queue<Byte>, Packet>>();
 		generator = null;
@@ -90,7 +90,7 @@ public class EXMacRouting extends NetworkLayer {
 
 	private void announceConversion(Position direction) {
 		
-		EXMacRoutingControlPacket packet = new EXMacRoutingControlPacket(sender, NodeId.ALLNODES, 
+		USAMacRoutingControlPacket packet = new USAMacRoutingControlPacket(sender, NodeId.ALLNODES, 
 				direction, generator.hypocenter, (generator.nextBackboneNode == node) 
 				? (null) 
 				: (generator.nextBackboneNode.getId()));
@@ -131,8 +131,8 @@ public class EXMacRouting extends NetworkLayer {
 				// --------------------------------------------------
 				packetQueue.add(new Pair<Queue<Byte>, Packet>(null, enclosed));
 			}
-		} else if (packet instanceof EXMacRoutingControlPacket) {
-			EXMacRoutingControlPacket controlPacket = (EXMacRoutingControlPacket) packet;
+		} else if (packet instanceof USAMacRoutingControlPacket) {
+			USAMacRoutingControlPacket controlPacket = (USAMacRoutingControlPacket) packet;
 			NodeId senderID = controlPacket.getSender().getId();
 			if (!backboneNeighbors.contains(senderID)) {
 				backboneNeighbors.add(senderID);
@@ -147,8 +147,8 @@ public class EXMacRouting extends NetworkLayer {
 					generator.convertToBackbone();
 				}
 			}
-		} else if (packet instanceof EXMacRoutingPacket) {
-			EXMacRoutingPacket exmacPacket = (EXMacRoutingPacket) packet;
+		} else if (packet instanceof USAMacRoutingPacket) {
+			USAMacRoutingPacket exmacPacket = (USAMacRoutingPacket) packet;
 			Packet enclosed = exmacPacket.getEnclosedPacket();
 			if (enclosed.getReceiver().equals(getId())) {
 				sendPacket(enclosed);
@@ -414,7 +414,7 @@ public class EXMacRouting extends NetworkLayer {
 		}
 		
 		private void sendEXMacRoutingPacket(Packet packet, NodeId destination, Queue<Byte> intermediatePath) {
-			EXMacRoutingPacket exmacPacket = new EXMacRoutingPacket(sender, destination, packet, intermediatePath);
+			USAMacRoutingPacket exmacPacket = new USAMacRoutingPacket(sender, destination, packet, intermediatePath);
 			sendPacket(exmacPacket);
 		}
 		

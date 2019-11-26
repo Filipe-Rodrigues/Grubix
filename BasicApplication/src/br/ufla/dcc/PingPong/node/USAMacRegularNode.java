@@ -14,7 +14,7 @@ import br.ufla.dcc.grubix.simulator.node.ApplicationLayer;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
 /** Classe que define a aplicação */
-public class EXMacRegularNode extends ApplicationLayer {
+public class USAMacRegularNode extends ApplicationLayer {
 
 	/** Posição dos nós que irão inicializar o envio do dado */
 	@ShoXParameter(description = " Nós que iniciarão o envio do dado")

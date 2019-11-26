@@ -1,4 +1,4 @@
-package br.ufla.dcc.PingPong.routing.EXMac;
+package br.ufla.dcc.PingPong.routing.USAMac;
 
 import java.io.BufferedReader;
 import java.io.File;
