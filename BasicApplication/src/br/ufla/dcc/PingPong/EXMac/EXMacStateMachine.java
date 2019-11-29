@@ -1,5 +1,6 @@
 package br.ufla.dcc.PingPong.EXMac;
 
+import br.ufla.dcc.PingPong.ToolsMiscellaneous;
 import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacActionType;
 import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacEventType;
 import br.ufla.dcc.PingPong.EXMac.EXMacState.EXMacStateType;
@@ -23,6 +24,8 @@ public class EXMacStateMachine  {
     EXMacConfiguration xConf;
     /** Endereço do nó atual */
     Address address;
+    /** Ferramenta para o VisualGrubix */
+	private ToolsMiscellaneous misc = ToolsMiscellaneous.getInstance();
     
     boolean debug = false;
 
@@ -161,6 +164,8 @@ public class EXMacStateMachine  {
     				if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_START, Event = TIME_OUT, Channel busy " );
     			}
     			else {
+    				/* Prepara o envio da taxa de sincronização deste nó */
+    				xState.setCycleShiftRatio(xConf.getCycleSyncTimingRatio());
     				// Se o canal está livre, envia RTS
     				changeState = setNewState(EXMacStateType.SENDING_RTS, xConf.stepsDelayTx(PacketType.RTS), EXMacActionType.START_RTS);
     				if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_START, Event = TIME_OUT, Channel free" );
@@ -201,6 +206,13 @@ public class EXMacStateMachine  {
     			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS_END, Event = TIME_OUT, verifique o canal " );
     		break;
     			
+    		case LOG_LINK:
+    			/* Uma ordem da Log Link Layer para enviar mensagem. Deve-se verificar se o canal está ocupado */
+    			xState.setRetryCSstart(xConf.getMaxBOstarts());
+    			changeState = setNewState(EXMacStateType.CS_START, xConf.getStepsCS(), EXMacActionType.ASK_CHANNEL);
+    			if(debug) System.out.println("Machine: " + address.getId()+ " State = CS, Event = LOG_LINK" );
+        	break;
+        	
     		case CHANNEL_FREE:
     			/* Nenhuma mensagem adicional foi enviada para este nó. Vá dormir   */
     			changeState = setNewState(EXMacStateType.SLEEP, xConf.getStepsSleep(), EXMacActionType.TURN_OFF);
@@ -372,6 +384,11 @@ public class EXMacStateMachine  {
     		case CTS_RECEIVED:
     			/* O número do preâmbulo é copiado na mensagem de CTS pelo vizinho que responde.  */
                 if (xState.getRecPkt().getRetryCount() == xState.getRtsPkt().getRetryCount()) { 
+                	/* Checa a taxa de sincronização do receptor. Se taxa < 0, o receptor foi sincronizado
+                	 * como filho deste nó. Senão, este nó deve ser sincronizado como o parente do receptor.*/
+                	if (xState.getRecPkt().getCycleTimeShift() >= 0) {
+                		xConf.reservePathFromChild(xState.getRecPkt().getCycleTimeShift());
+                	}
                 	/* Avisa XMAC que tem um pacote DATA a ser enviado em seguida   */
     				changeState = setNewState(EXMacStateType.SENDING_DATA, xConf.stepsDelayTx(PacketType.DATA), EXMacActionType.MSG_DOWN);
     				if(debug) System.out.println("Machine: " + address.getId() + " State = WAITING_CTS, Event = CTS_RECEIVED " );
@@ -490,6 +507,15 @@ public class EXMacStateMachine  {
     	boolean changeState;
 		/* Se recebeu uma mensagem RTS durante o CS. RTS é a o único tipo de mensagem que importa aqui  */
 		if (xState.getRecPkt().getReceiver() == this.address.getId()){
+			/* Checa necessidade de alterar ciclo*/
+			if (!xConf.isCycleTimingRatioSet() || xConf.getParentSync().equals(xState.getRecPkt().getSender().getId())) {
+				xConf.reservePathFromParent(xState.getRecPkt().getCycleTimeShift());
+				xConf.setParentSync(xState.getRecPkt().getSender().getId());
+				misc.vGrubix(address.getId(), "Sincronizados", "DARK_BLUE");
+				xState.setCycleShiftRatio(-1);
+			} else {
+				xState.setCycleShiftRatio(xConf.getCycleSyncTimingRatio());
+			}
 	    	// Vai avisar a XMac que tem um pacote CTS a ser enviado em seguida
 	        changeState = setNewState(EXMacStateType.SENDING_CTS, xConf.stepsDelayTx(PacketType.CTS), EXMacActionType.MSG_DOWN);
 	        if(debug) System.out.println("Machine: " + address.getId()+ " State = " + oldState + ", Event = RTS_RECEIVED unicast" );

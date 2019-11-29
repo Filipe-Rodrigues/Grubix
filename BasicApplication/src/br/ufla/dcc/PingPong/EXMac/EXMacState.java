@@ -67,7 +67,9 @@ public class EXMacState extends LayerState {
     
     /** Indica que há mensagem de dados a ser enviada. Usado quando termina o tempo de Sleep */
     private boolean dataPending;
- 
+    
+    /** Taxa de sincronização de ciclo. Se taxa < 0, significa que não haverá requisição de sincronia */
+    private double cycleShiftRatio;
     
 	/** Default constructor */
 	public EXMacState(EXMacStateType state, int seq) {
@@ -190,11 +192,19 @@ public class EXMacState extends LayerState {
 		this.dataPending = dataPending;
 	}
 
+	public double getCycleShiftRatio() {
+		return cycleShiftRatio;
+	}
 
+
+	public void setCycleShiftRatio(double cycleShiftRatio) {
+		this.cycleShiftRatio = cycleShiftRatio;
+	}
+	
 	/* 
 	 * Enumerations
 	 */
- 
+
 	/**
 	 * Esse enum implementa os possiveis estados da MAC de um nó sensor, que utiliza X_MAC. 
 	 * 

@@ -9,11 +9,14 @@ import java.util.Map;
 import java.util.Queue;
 
 import br.ufla.dcc.grubix.simulator.Position;
+import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 
 public class BackboneRouteGraph {
 
 	private static final double INFINITE = Double.MAX_VALUE;
 	private static Map<String, BackboneRouteGraph> instances = new HashMap<String, BackboneRouteGraph>();
+	private final double MAX_X = Configuration.getInstance().getXSize();
+	private final double MAX_Y = Configuration.getInstance().getYSize();
 
 	private Position[][] adjacencyMatrix;
 	private byte vertexCount;
@@ -46,7 +49,7 @@ public class BackboneRouteGraph {
 					i--;
 					j--;
 				}
-				adjacencyMatrix[i][j] = new Position(Double.parseDouble(line.split(" ")[2]), Double.parseDouble(line.split(" ")[3]));
+				adjacencyMatrix[i][j] = new Position(Double.parseDouble(line.split(" ")[2]) * MAX_X, Double.parseDouble(line.split(" ")[3]) * MAX_Y);
 			}
 			br.close();
 		} catch (Exception e) {
@@ -138,8 +141,8 @@ public class BackboneRouteGraph {
 		fillPathQueue(path, parents, target);
 		Entry<Double, Queue<Byte>> shortestPathToTarget = new Entry<Double, Queue<Byte>>
 		(totalDistance, path);
-		System.out.println("PATH: " + path);
-		System.out.println("PATH DISTANCE: " + totalDistance);
+		//System.out.println("PATH: " + path);
+		//System.out.println("PATH DISTANCE: " + totalDistance);
 		//printDijkstra(source, distances, parents);
 		return shortestPathToTarget;
 	}

@@ -1,5 +1,6 @@
 package br.ufla.dcc.PingPong.EXMac;
 
+import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.MACPacket.PacketType;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
@@ -71,6 +72,9 @@ public class EXMacConfiguration {
 	
 	/** Tamanho do ciclo em steps */
 	private double stepsPerCycle;
+
+	/** ID do nó pai na cadeia de sincronia */
+    private NodeId parentSync;
 	
 	
 	/** Construtor */
@@ -118,6 +122,7 @@ public class EXMacConfiguration {
 		 */
 		maxPreambles = (int) (stepsCycle / (stepsRTS + stepsDelayRx(PacketType.CTS))) + 1 ;
 		cycleSyncTimingRatio = -1;
+		parentSync = null;
 	}
 
 	
@@ -128,9 +133,9 @@ public class EXMacConfiguration {
 		return stepsSleep + stepsCS;
 	}
 	
-	public void updateCycleSyncTiming(double parentNodeCycleSyncTimingRatio) {
+	public void reservePathFromParent(double parentNodeCycleSyncTimingRatio) {
 		if (parentNodeCycleSyncTimingRatio >= 0) {
-			double cycleShift = stepsDelayTx(PacketType.CTS) + stepsDelayRx(PacketType.DATA) + getStepsCS() * 2.5;
+			double cycleShift = stepsDelayRx(PacketType.RTS) + stepsDelayTx(PacketType.CTS) + stepsDelayRx(PacketType.DATA) + getStepsCS() * 2.5;
 			if (ackRequested) {
 				cycleShift += stepsDelayTx(PacketType.ACK);
 			}
@@ -143,13 +148,27 @@ public class EXMacConfiguration {
 		}
 	}
 	
+	public void reservePathFromChild(double childNodeCycleSyncTimingRatio) {
+		if (childNodeCycleSyncTimingRatio >= 0) {
+			double cycleShift = stepsDelayRx(PacketType.RTS) + stepsDelayTx(PacketType.CTS) + stepsDelayRx(PacketType.DATA) + getStepsCS() * 2.5;
+			if (ackRequested) {
+				cycleShift += stepsDelayTx(PacketType.ACK);
+			}
+			double cycleShiftRatio = cycleShift / stepsPerCycle;
+			cycleSyncTimingRatio = cycleShiftRatio - childNodeCycleSyncTimingRatio;
+			if (cycleSyncTimingRatio < 1) {
+				cycleSyncTimingRatio += 1;
+			}
+			// getStepsSleep();
+		}
+	}
+	
 	public double getStepsSleep() {
 		if (cycleSyncTimingRatio >= 0) {
 			double currentTime = SimulationManager.getInstance().getCurrentTime();
 			double stepsToSleep = stepsPerCycle * (1 + cycleSyncTimingRatio) - (currentTime % stepsPerCycle);
-			// System.err.println((currentTime % stepsPerCycle));
-			// System.err.println("SINCRONIZOU?? Se eu dormir " + stepsToSleep + ", eu
-			// acordo em " + (stepsToSleep + currentTime));
+			//System.err.println((currentTime % stepsPerCycle));
+			//System.err.println("SINCRONIZOU?? Se eu dormir " + stepsToSleep + ", eu acordo em " + (stepsToSleep + currentTime));
 			return stepsToSleep;
 
 		}
@@ -228,13 +247,30 @@ public class EXMacConfiguration {
 		this.ackRequested = ack;
 	}
 	
-	public void startupCycleSyncTimingRatio() {
-		cycleSyncTimingRatio = 0;
+	public void startupCycleSyncTimingRatio(NodeId myId) {
+		if (cycleSyncTimingRatio < 0) {
+			cycleSyncTimingRatio = 0;
+			parentSync = myId;
+		}
+	}
+	
+	public boolean isCycleTimingRatioSet() {
+		return cycleSyncTimingRatio >= 0;
 	}
 	
 	public double getCycleSyncTimingRatio() {
 		return cycleSyncTimingRatio;
 	}
+	
+
+	public NodeId getParentSync() {
+		return parentSync;
+	}
+
+	public void setParentSync(NodeId parentSync) {
+		this.parentSync = parentSync;
+	}
+	
 
 	/** Informa tempo (em steps) para esperar o rádio transmitir um pacote. 
 	 *  É a soma de um intervalo de transmissão do pacote com um possível pequeno atraso do rádio */

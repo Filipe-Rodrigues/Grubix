@@ -21,24 +21,25 @@
     <node name="REGULAR" count="1500">
         <layers>
         	<application>
-                <class>br.ufla.dcc.PingPong.node.USAMacRegularNodeList</class>
-                
+                <class>br.ufla.dcc.PingPong.node.ProtocolComparisonList</class>
+                <params>
+                	<param name="laps">2</param>
+                </params>
             </application>
             <operatingSystem>
                 <class>br.ufla.dcc.grubix.simulator.node.user.os.NullOperatingSystemLayer</class>
             </operatingSystem>
             <network>
-                <class>br.ufla.dcc.PingPong.routing.USAMac.USAMacRouting</class>
+                <class>br.ufla.dcc.PingPong.routing.GeoRouting</class>
             </network>
             <logLink>
                 <class>br.ufla.dcc.PingPong.Llc.LogLinkControl</class>
             </logLink>
             <mac>
-                <class>br.ufla.dcc.PingPong.USAMac.USAMac</class>
+                <class>br.ufla.dcc.PingPong.EXMac.EXMac</class>
                 <params>
                     <param name="cycleTime">0.1</param>
                     <param name="ackRequested">false</param>
-                    <!--<param name="backboneFormingTime">1000</param>-->
                 </params>
             </mac>
             <energyManager>
@@ -92,5 +93,5 @@
     </generated>
 </positions>
 <!--Tempo total de simulação = stepspersecond * seconds-->
-<simulationtime stepspersecond="10000" base="seconds">10</simulationtime>
+<simulationtime stepspersecond="10000" base="seconds">12</simulationtime>
 </configuration>

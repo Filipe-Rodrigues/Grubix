@@ -228,6 +228,8 @@ public class EXMac extends MACLayer {
 			sendPacket(llPacket);
 			return;
 		}
+		
+		xConf.startupCycleSyncTimingRatio(node.getId());
 
 		startSendDataProcess(llPacket);
 
@@ -504,7 +506,7 @@ public class EXMac extends MACLayer {
 	/** Função para criar pacotes de controle (RTS, CTS, ACK) */
 	private EXMacPacket createCtrlPacket(NodeId receiver, PacketType type, int retryCount, boolean ACKreq,
 			int headerLength, double signalStrength) {
-		EXMacPacket newPack = new EXMacPacket(this.sender, receiver, type, signalStrength);
+		EXMacPacket newPack = new EXMacPacket(this.sender, receiver, type, signalStrength, xState.getCycleShiftRatio());
 		// Tamanho do pacote em bits
 		newPack.setHeaderLength(headerLength);
 		// Número de tentativas de estabelecer comunicação

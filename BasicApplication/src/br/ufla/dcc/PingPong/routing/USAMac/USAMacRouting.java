@@ -327,14 +327,14 @@ public class USAMacRouting extends NetworkLayer {
 					+ estimatePreambleCountToBackbone(target, backboneDirectionTarget)
 					+ (MEAN_PREAMBLE_COUNT_BACKBONE * shortestPath.getLeft() / MEAN_HOP_DISTANCE);
 			double directDist = estimatePreambleCountDirect(node.getPosition(), target);
-			System.err.print("BB DIST: " + backbonedDist + " ///// ");
-			System.err.println("DIR DIST: " + directDist);
+			//System.err.print("BB DIST: " + backbonedDist + " ///// ");
+			//System.err.println("DIR DIST: " + directDist);
 			if (directDist <= backbonedDist) {
 				routePacketDirectly(packet);
-				System.err.println("Using DIRECT........");
+				//System.err.println("Using DIRECT........");
 			} else {
 				routePacketUsingBackbone(packet, shortestPath.getRight());
-				System.err.println("Using BACKBONE........");
+				//System.err.println("Using BACKBONE........");
 			}
 		}
 

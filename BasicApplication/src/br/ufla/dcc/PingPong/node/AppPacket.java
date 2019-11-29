@@ -22,7 +22,7 @@ public class AppPacket extends ApplicationPacket{
 
 	public AppPacket(Address sender, NodeId receiver) {
 		super(sender, receiver);
-		// TODO Auto-generated constructor stub
+		this.destinationId = receiver.asInt();
 	}
 	
 

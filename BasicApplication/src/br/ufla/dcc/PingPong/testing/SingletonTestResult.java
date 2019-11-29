@@ -10,6 +10,7 @@ import java.util.TreeMap;
 import javax.swing.JOptionPane;
 
 import br.ufla.dcc.grubix.simulator.NodeId;
+import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 
 public class SingletonTestResult {
 
@@ -37,6 +38,10 @@ public class SingletonTestResult {
 
 	private double startSimulationTime;
 	private double endSimulationTime;
+	
+	private double tick = -1;
+	private double tock = -1;
+	private double timeAccumulated = 0;
 
 	private double hopNumber;
 	private double preambleNumber;
@@ -92,7 +97,21 @@ public class SingletonTestResult {
 			}
 		}
 	}
+	
+	public void mark() {
+		if (tick < 0) {
+			tick = SimulationManager.getInstance().getCurrentTime();
+		} else {
+			tock = SimulationManager.getInstance().getCurrentTime();
+			timeAccumulated += (tock - tick);
+			tick = tock = -1;
+		}
+	}
 
+	public double getAccumulatedTime() {
+		return timeAccumulated;
+	}
+	
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
 	}

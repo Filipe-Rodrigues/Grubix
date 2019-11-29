@@ -15,13 +15,14 @@ public class Main {
 			//String path = args[0];
 			//args = new String[1];
 			//args[0] = path;
-			
+
 			
 			//Simulator.main(new String[]{"application_usamac_gerador.xml", "true", "false"});
 			
 			
-			Simulator.main(new String[]{"application_usamac_teste.xml", "false", "true"});
-			//Simulator.main(new String[]{"application_usamac_teste_georouting.xml", "false", "true"});
+			//Simulator.main(new String[]{"TESTE_XMAC.xml", "false", "true"});
+			Simulator.main(new String[]{"TESTE_EXMAC.xml", "false", "true"});
+			//Simulator.main(new String[]{"TESTE_USAMAC.xml", "false", "true"});
 			
 			long endTime   = System.currentTimeMillis();
 			long totalTime = endTime - startTime;
