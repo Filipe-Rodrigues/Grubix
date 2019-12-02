@@ -31,7 +31,7 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
  * area, i.e. 0 <= x <= Configuration.xSize and y, accordingly.
  * @author jlsx
  */
-public class EXMacRandomStartPositions extends br.ufla.dcc.grubix.simulator.movement.StartPositionGenerator {
+public class USAMacRandomStartPositions extends br.ufla.dcc.grubix.simulator.movement.StartPositionGenerator {
 	
 	/** testingCase = 1: Diagonal Principal
 	 *  testingCase = 2: Vertical 
@@ -97,6 +97,9 @@ public class EXMacRandomStartPositions extends br.ufla.dcc.grubix.simulator.move
 			return new Position(xSize/3d, 19d*ySize/20d);
 		} else if (node.getId().asInt() == 1 || node.getId().asInt() == 2) {
 			return generateFixedPosition(node.getId().asInt());
+		} else if (node.getId().asInt() == 5) {
+			// Fixa um possível sink no meio do canto inferior:
+			return new Position(xSize / 2d, ySize - 5);
 		} else {
 			return generateRandom();
 		}

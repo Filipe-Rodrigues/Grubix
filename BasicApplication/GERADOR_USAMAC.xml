@@ -79,7 +79,7 @@
             <!-- Define a posição dos nós informados baseado nos parametros -->
             <!--<class>br.ufla.dcc.PingPong.PaxMac.PaxRandomStartPositions</class>-->
             <!--<class>br.ufla.dcc.PingPong.movement.FromConfigStartPositions</class>-->
-            <class>br.ufla.dcc.PingPong.movement.EXMacRandomStartPositions</class>
+            <class>br.ufla.dcc.PingPong.movement.USAMacRandomStartPositions</class>
             <!--<class>br.ufla.dcc.grubix.simulator.movement.GridPositionGenerator</class>-->
             <params>
             	<!-- SOMENTE PARA GridPositionGenerator-->
