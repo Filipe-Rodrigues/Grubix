@@ -15,6 +15,7 @@ import java.util.TreeMap;
 
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.Position;
+import br.ufla.dcc.grubix.simulator.util.Pair;
 
 /**
  * ESSA CLASSE SERVE APENAS COMO SUPORTE AOS TESTES DO EXMac!!!
@@ -23,6 +24,8 @@ import br.ufla.dcc.grubix.simulator.Position;
  * */
 public class BackboneConfigurationManager implements Serializable {
 
+	public static final int USAMAC_CONFIG = 0;
+	public static final int MXMAC_CONFIG = 1;
 	private static final long serialVersionUID = 1L;
 	
 	private SortedMap<NodeId, BackboneConfiguration> allNodesConfigurations;
@@ -36,22 +39,23 @@ public class BackboneConfigurationManager implements Serializable {
 		testNodes = new LinkedList<Integer>();
 	}
 	
-	public static BackboneConfigurationManager getInstance() {
+	public static BackboneConfigurationManager getInstance(int protocolType) {
 		if (singleton == null) {
-			loadConfiguration();
+			loadConfiguration(protocolType);
 		}
 		return singleton;
 	}
 	
-	public static void close(boolean saveConfig) {
+	public static void close(boolean saveConfig, int protocolType) {
 		if (saveConfig) {
-			saveConfiguration();
+			saveConfiguration(protocolType);
 		}
 	}
 	
-	private static void saveConfiguration() {
+	private static void saveConfiguration(int protocolType) {
+		String fileName = "config" + ((protocolType == USAMAC_CONFIG) ? ("USAMac") : ("MXMac")) + ".dat";
 		try {
-			File file = new File(System.getProperty("user.dir") + "/backbone_config/config.dat");
+			File file = new File(System.getProperty("user.dir") + "/backbone_config/" + fileName);
 			if (file.exists()) {
 				file.delete();
 			}
@@ -66,11 +70,12 @@ public class BackboneConfigurationManager implements Serializable {
 		}
 	}
 	
-	private static void loadConfiguration() {
+	private static void loadConfiguration(int protocolType) {
+		String fileName = "config" + ((protocolType == USAMAC_CONFIG) ? ("USAMac") : ("MXMac")) + ".dat";
 		try {
 			if (usingFile) {
 				FileInputStream fis = new FileInputStream(
-						new File(System.getProperty("user.dir") + "/backbone_config/config.dat"));
+						new File(System.getProperty("user.dir") + "/backbone_config/" + fileName));
 				ObjectInputStream ois = new ObjectInputStream(fis);
 				singleton = (BackboneConfigurationManager) ois.readObject();
 				ois.close();
@@ -100,7 +105,7 @@ public class BackboneConfigurationManager implements Serializable {
 	
 	public boolean amIBackbone(NodeId myId) {
 		if (allNodesConfigurations.containsKey(myId)) {
-			return allNodesConfigurations.get(myId).nextBackboneNode != null;
+			return allNodesConfigurations.get(myId).backboneChannel > 0;
 		}
 		return false;
 	}
@@ -119,11 +124,18 @@ public class BackboneConfigurationManager implements Serializable {
 		return null;
 	}
 	
-	public List<NodeId> loadBackboneNeighbors(NodeId myId) {
+	public List<NodeId> loadBackboneNeighborsUSAMac(NodeId myId) {
 		if (allNodesConfigurations.containsKey(myId)) {
-			return allNodesConfigurations.get(myId).backboneNeighbors;
+			return allNodesConfigurations.get(myId).backboneNeighborsUSAMac;
 		}
 		return new ArrayList<NodeId>();
+	}
+	
+	public List<Pair<NodeId, Integer>> loadBackboneNeighborsMXMac(NodeId myId) {
+		if (allNodesConfigurations.containsKey(myId)) {
+			return allNodesConfigurations.get(myId).backboneNeighborsMXMac;
+		}
+		return new ArrayList<Pair<NodeId, Integer>>();
 	}
 	
 	private void ensureNodeRegistration(NodeId myId) {
@@ -140,12 +152,28 @@ public class BackboneConfigurationManager implements Serializable {
 	
 	public void addBackboneNeighbor(NodeId myId, NodeId neighborId) {
 		ensureNodeRegistration(myId);
-		allNodesConfigurations.get(myId).backboneNeighbors.add(neighborId);
+		allNodesConfigurations.get(myId).backboneNeighborsUSAMac.add(neighborId);
+	}
+	
+	public void addBackboneNeighbor(NodeId myId, NodeId neighborId, int bbChannel) {
+		ensureNodeRegistration(myId);
+		allNodesConfigurations.get(myId).backboneNeighborsMXMac.add(new Pair<NodeId, Integer>(neighborId, bbChannel));
 	}
 	
 	public void setBackboneNodeLabel(NodeId myId, byte label) {
 		ensureNodeRegistration(myId);
 		allNodesConfigurations.get(myId).label = label;
+	}
+	
+	public void setBackboneNodeChannel(NodeId myId, int channel) {
+		ensureNodeRegistration(myId);
+		allNodesConfigurations.get(myId).backboneChannel = channel;
+	}
+	public int getBackboneNodeChannel(NodeId myId) {
+		if (amIBackbone(myId)) {
+			return allNodesConfigurations.get(myId).backboneChannel;
+		}
+		return -1;
 	}
 	
 	public byte getBackboneNodeLabel(NodeId myId) {

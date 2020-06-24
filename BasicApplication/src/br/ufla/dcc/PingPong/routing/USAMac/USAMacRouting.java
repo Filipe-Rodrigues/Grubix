@@ -4,6 +4,7 @@ import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.DOWN;
 import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.LEFT;
 import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.RIGHT;
 import static br.ufla.dcc.PingPong.routing.USAMac.AuxiliarConstants.UP;
+import static br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager.USAMAC_CONFIG;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -94,7 +95,7 @@ public class USAMacRouting extends NetworkLayer {
 				direction, generator.hypocenter, (generator.nextBackboneNode == node) 
 				? (null) 
 				: (generator.nextBackboneNode.getId()));
-		BackboneConfigurationManager.getInstance().setNextBackboneNode(node.getId(), 
+		BackboneConfigurationManager.getInstance(USAMAC_CONFIG).setNextBackboneNode(node.getId(), 
 				generator.nextBackboneNode.getId(), direction);
 		sendPacket(packet);
 	}
@@ -106,7 +107,7 @@ public class USAMacRouting extends NetworkLayer {
 	}
 	
 	private void ensureNextBackboneNodeRegistration() {
-		NodeId nextBBNode = BackboneConfigurationManager.getInstance().getNextBackboneNode(node.getId());
+		NodeId nextBBNode = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getNextBackboneNode(node.getId());
 		if (nextBBNode != null) {
 			generator.nextBackboneNode = SimulationManager.getInstance().queryNodeById(nextBBNode);
 		}
@@ -136,7 +137,7 @@ public class USAMacRouting extends NetworkLayer {
 			NodeId senderID = controlPacket.getSender().getId();
 			if (!backboneNeighbors.contains(senderID)) {
 				backboneNeighbors.add(senderID);
-				BackboneConfigurationManager.getInstance().addBackboneNeighbor(node.getId(), senderID);
+				BackboneConfigurationManager.getInstance(USAMAC_CONFIG).addBackboneNeighbor(node.getId(), senderID);
 			}
 			ensureNextBackboneNodeRegistration();
 			if (generator.nextBackboneNode == null) {
@@ -267,9 +268,9 @@ public class USAMacRouting extends NetworkLayer {
 				this.travelDirection = travelDirection;
 			} else {
 				NodeId myId = node.getId();
-				label = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(myId);
-				backboneNeighbors = BackboneConfigurationManager.getInstance().loadBackboneNeighbors(myId);
-				this.travelDirection = BackboneConfigurationManager.getInstance().getBackboneDirection(myId);
+				label = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneNodeLabel(myId);
+				backboneNeighbors = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).loadBackboneNeighborsUSAMac(myId);
+				this.travelDirection = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneDirection(myId);
 				//label = getCorrespondingLabel(node.getPosition(), travelDirection);
 			}
 		}
@@ -290,7 +291,7 @@ public class USAMacRouting extends NetworkLayer {
 			nextBackboneNode = (canIGrowMore()) ? (selectNextNeighbor()) : (node);
 			//System.err.println("CHOOSEN ID for #" + node.getId() + ": " + nextBackboneNode.getId());
 			label = getCorrespondingLabel(node.getPosition(), travelDirection);
-			BackboneConfigurationManager.getInstance().setBackboneNodeLabel(node.getId(), label);
+			BackboneConfigurationManager.getInstance(USAMAC_CONFIG).setBackboneNodeLabel(node.getId(), label);
 			announceConversion(travelDirection);
 		}
 		
@@ -347,7 +348,7 @@ public class USAMacRouting extends NetworkLayer {
 				boolean sentMessage = false;
 				if (amIBackbone()) {
 					NodeId nextBBNode = nextBackboneNode.getId();
-					byte neighLabel = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(nextBBNode);
+					byte neighLabel = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneNodeLabel(nextBBNode);
 					if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 						intermediatePaths.poll();
 						sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
@@ -356,7 +357,7 @@ public class USAMacRouting extends NetworkLayer {
 				}
 				if (!sentMessage && !backboneNeighbors.isEmpty()) {
 					for (NodeId neighbor : backboneNeighbors) {
-						byte neighLabel = BackboneConfigurationManager.getInstance().getBackboneNodeLabel(neighbor);
+						byte neighLabel = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneNodeLabel(neighbor);
 						if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 							//System.err.println("FOUND BACKBONE BRANCH: ");
 							intermediatePaths.poll();

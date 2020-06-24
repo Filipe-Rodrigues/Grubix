@@ -56,9 +56,9 @@ public final class Simulator {
 	public static void main(String[] args) {
 		try {
 			String log4jFile = "log4j.properties";
-			if (args.length >= 4) {
-				System.out.println("Using logging " + args[3]);
-				log4jFile = args[3];
+			if (args.length >= 5) {
+				System.out.println("Using logging " + args[4]);
+				log4jFile = args[4];
 			}
 			PropertyConfigurator.configure(log4jFile);
 			LOGGER.info("Network Simulator is configuring...");
@@ -125,7 +125,13 @@ public final class Simulator {
 					+ seed + ")");
 			
 			// Salva a configuração dos backbones. ÚTIL APENAS AO PROJETO EXMac!!!!
-			BackboneConfigurationManager.close(Boolean.parseBoolean(args[1]));
+			int protocol = -1;
+			if (args[3].equals("USAMAC")) {
+				protocol = BackboneConfigurationManager.USAMAC_CONFIG;
+			} else if (args[3].equals("MXMAC")) {
+				protocol = BackboneConfigurationManager.MXMAC_CONFIG;
+			}
+			BackboneConfigurationManager.close(Boolean.parseBoolean(args[1]), protocol);
 			
 			//System.err.println("SIMULAÇÃO TERMINADA COM SUCESSO!");
 		} catch (ConfigurationException e) {

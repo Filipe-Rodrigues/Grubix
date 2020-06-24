@@ -106,7 +106,7 @@ public class PhysicalLayerState extends LayerState {
 			currentSignalStrength = minimumSignalStrength;
 		}
 		
-		if (currentSignalStrength < maximumSignalStrength) {
+		if (currentSignalStrength > maximumSignalStrength) {
 			currentSignalStrength = maximumSignalStrength;
 		}
 		

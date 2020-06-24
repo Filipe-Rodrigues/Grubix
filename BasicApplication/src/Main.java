@@ -1,6 +1,5 @@
 import br.ufla.dcc.grubix.simulator.kernel.Simulator;
 
-
 public class Main {
 
 	public static void main(String[] args) {
@@ -17,12 +16,12 @@ public class Main {
 			//args[0] = path;
 
 			
-			//Simulator.main(new String[]{"GERADOR_USAMAC.xml", "true", "false"});
+			//Simulator.main(new String[]{"GERADOR_USAMAC.xml", "true", "false", "USAMAC"});
 			
 			
-			//Simulator.main(new String[]{"TESTE_XMAC.xml", "false", "true"});
-			//Simulator.main(new String[]{"TESTE_EXMAC.xml", "false", "true"});
-			Simulator.main(new String[]{"TESTE_USAMAC.xml", "false", "true"});
+			//Simulator.main(new String[]{"TESTE_XMAC.xml", "false", "true", "N/A"});
+			//Simulator.main(new String[]{"TESTE_EXMAC.xml", "false", "true", "N/A"});
+			Simulator.main(new String[]{"TESTE_USAMAC.xml", "false", "true", "USAMAC"});
 			
 			long endTime   = System.currentTimeMillis();
 			long totalTime = endTime - startTime;
