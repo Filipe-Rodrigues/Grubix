@@ -68,6 +68,8 @@ public final class Simulator {
 				return;
 			}
 
+			BackboneConfigurationManager.startup(Boolean.parseBoolean(args[2]));
+			
 			Configuration configuration = Configuration.readConfig(args[0]);
 			
 			ShoxLogger writer = null;
@@ -88,8 +90,6 @@ public final class Simulator {
 				}
 
 			}
-
-			BackboneConfigurationManager.startup(Boolean.parseBoolean(args[2]));
 			
 			// create empty map to fill later because NodeGenerator needs a
 			// SimulationManager reference to be able

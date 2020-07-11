@@ -30,13 +30,13 @@
                 <class>br.ufla.dcc.grubix.simulator.node.user.os.NullOperatingSystemLayer</class>
             </operatingSystem>
             <network>
-                <class>br.ufla.dcc.PingPong.routing.USAMac.USAMacRouting</class>
+                <class>br.ufla.dcc.PingPong.routing.MXMac.MXMacRouting</class>
             </network>
             <logLink>
                 <class>br.ufla.dcc.PingPong.Llc.LogLinkControl</class>
             </logLink>
             <mac>
-                <class>br.ufla.dcc.PingPong.USAMac.USAMac</class>
+                <class>br.ufla.dcc.PingPong.MXMac.MXMac</class>
                 <params>
                     <param name="cycleTime">0.1</param>
                     <param name="ackRequested">false</param>
@@ -47,7 +47,7 @@
                 <class>br.ufla.dcc.grubix.simulator.node.energy.BasicEnergyManager</class>
             </energyManager>
             <physical>
-                <class>br.ufla.dcc.PingPong.physicalX.PhysicalX</class>
+                <class>br.ufla.dcc.PingPong.physicalMX.PhysicalMX</class>
                 <params>
                 </params>
             </physical>      
@@ -65,6 +65,7 @@
         <acceptedtypes>
             <class priority="off">br.ufla.dcc.grubix.simulator.event.user.OptSrcRoutingPacket</class>
             <class priority="info">br.ufla.dcc.grubix.simulator.event.PhysicalPacket</class>
+            <class priority="info">br.ufla.dcc.PingPong.physicalMX.PhysicalMXPacket</class>
             <class priority="info">br.ufla.dcc.grubix.simulator.event.Transmission</class>
             <class priority="info">br.ufla.dcc.grubix.simulator.event.TransmissionBeginIncoming</class>
             <class priority="info">br.ufla.dcc.grubix.simulator.event.TransmissionEndIncoming</class>

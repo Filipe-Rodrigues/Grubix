@@ -10,15 +10,19 @@ public class MXMacBackbonePacket extends MXMacPacket {
 	
 	private NodeId nextBackboneTarget;
 	
-	public MXMacBackbonePacket(Address sender, LogLinkPacket packet, boolean ackReq, double parentCycleShift) {
+	private int backboneChannel;
+	
+	public MXMacBackbonePacket(Address sender, LogLinkPacket packet, boolean ackReq, int channel, double parentCycleShift) {
 		super(sender, packet, ackReq);
 		parentBackboneCycleShiftRatio = parentCycleShift;
+		backboneChannel = channel;
 		nextBackboneTarget = null;
 	}
 	
-	public MXMacBackbonePacket(Address sender, LogLinkPacket packet, boolean ackReq, NodeId nextBackbone, double parentCycleShift) {
+	public MXMacBackbonePacket(Address sender, LogLinkPacket packet, boolean ackReq, int channel, NodeId nextBackbone, double parentCycleShift) {
 		super(sender, packet, ackReq);
 		parentBackboneCycleShiftRatio = parentCycleShift;
+		backboneChannel = channel;
 		nextBackboneTarget = nextBackbone;
 	}
 
@@ -30,4 +34,8 @@ public class MXMacBackbonePacket extends MXMacPacket {
 		return nextBackboneTarget;
 	}
 
+	public int getBackboneChannel() {
+		return backboneChannel;
+	}
+	
 }

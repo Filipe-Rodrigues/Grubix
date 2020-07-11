@@ -16,7 +16,8 @@ public class BackboneConfiguration implements Serializable {
 	public NodeId nextBackboneNode;
 	public Position direction;
 	public List<NodeId> backboneNeighborsUSAMac;
-	public List<Pair<NodeId, Integer>> backboneNeighborsMXMac;
+	public List<NodeId> backboneNeighborsMXMacType1;
+	public List<NodeId> backboneNeighborsMXMacType2;
 	public byte label;
 	public double cycleStart;
 	
@@ -24,7 +25,17 @@ public class BackboneConfiguration implements Serializable {
 		nextBackboneNode = null;
 		backboneChannel = 0;
 		backboneNeighborsUSAMac = new ArrayList<NodeId>();
-		backboneNeighborsMXMac = new ArrayList<Pair<NodeId, Integer>>();
+		backboneNeighborsMXMacType1 = new ArrayList<NodeId>();
+		backboneNeighborsMXMacType2 = new ArrayList<NodeId>();
 		label = -1;
+		cycleStart = -1;
+	}
+	
+	public void addBackboneNeighborMXMac(NodeId bbNeighbor, int bbType) {
+		if (bbType == 1) {
+			backboneNeighborsMXMacType1.add(bbNeighbor);
+		} else {
+			backboneNeighborsMXMacType2.add(bbNeighbor);
+		}
 	}
 }

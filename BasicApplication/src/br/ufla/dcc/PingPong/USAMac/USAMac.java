@@ -134,7 +134,8 @@ public class USAMac extends MACLayer {
 		// Define o novo estado e duração, e incrementa a sequência de estado
 		if (BackboneConfigurationManager.getInstance(USAMAC_CONFIG).amIBackbone(node.getId())) {
 			switchToBackbone();
-			xConf.setCycleSyncTiming(BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getNodeCycleSyncTiming(node.getId()));
+			double cycleRatio = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getNodeCycleSyncTiming(node.getId());
+			xConf.setCycleSyncTiming(cycleRatio);
 		}
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();
@@ -245,7 +246,7 @@ public class USAMac extends MACLayer {
 	public final void upperSAP(Packet llPacket) {
 
 		if (this.node.getId().asInt() == -1) {
-			System.out.println("\n  +  Este é o EX-MAC 2019  +\n");
+			System.out.println("\n  +  Este é o USA-MAC 2019  +\n");
 			xConf.imprimeParametros();
 		}
 

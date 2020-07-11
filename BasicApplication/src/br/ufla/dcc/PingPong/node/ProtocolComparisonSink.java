@@ -16,7 +16,7 @@ public class ProtocolComparisonSink extends ApplicationLayer {
 	@ShoXParameter(description = "Número de voltas que a aplicação irá realizar", defaultValue = "2")
 	private int laps;
 
-	private static final int COMM_NODES = 10;
+	private static final int COMM_NODES = 1;
 	private static final NodeId SINK = NodeId.get(5);
 
 	protected void processEvent(StartSimulation start) {

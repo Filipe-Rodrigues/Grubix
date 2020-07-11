@@ -33,6 +33,7 @@ public class MXMacRoutingControlPacket extends NetworkPacket {
 		return nextSelectedBackbone;
 	}
 
+	//* Retorna o tipo do backbone (1 = Horário; 2 = Anti-horário)*/
 	public int getBackboneType() {
 		return backboneType;
 	}

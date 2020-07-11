@@ -23,10 +23,21 @@ public class MXMacGraphOperations {
 	class LabelProperties {
 		Position direction;
 		double fieldProportion;
+		String backboneClass;
 		
 		public LabelProperties(Position dir, double proportion) {
 			direction = dir;
 			proportion = fieldProportion;
+		}
+	}
+	
+	class CalculationResults {
+		Pair<Double, Queue<Integer>> dijkstraResults;
+		Position backboneEntrance;
+		
+		public CalculationResults(Pair<Double, Queue<Integer>> dijkstra, Position entrance) {
+			dijkstraResults = dijkstra;
+			backboneEntrance = entrance;
 		}
 	}
 	
@@ -36,7 +47,7 @@ public class MXMacGraphOperations {
 	private Map<Character, List<Integer>> regionLabels;
 	private boolean directed;
 	private Position[][] adjMatrix;
-	private LabelProperties[] labelDirections;
+	private LabelProperties[] labelProperties;
 	private int vertexCount;
 	
 	
@@ -105,7 +116,7 @@ public class MXMacGraphOperations {
 			else if (args[0].matches("[0-9]+")) {
 				Position dir = getDirectionFromString(args[1]);
 				double proportion = Double.parseDouble(args[2]);
-				labelDirections[Integer.parseInt(args[0])] = new LabelProperties(dir, proportion);
+				labelProperties[Integer.parseInt(args[0])] = new LabelProperties(dir, proportion);
 			} else if (args[0].matches("[A-Z]")) {
 				for (int i = 1; i < args.length; i++) {
 					regionLabels.get(args[0].charAt(0)).add(Integer.parseInt(args[i]));
@@ -124,10 +135,10 @@ public class MXMacGraphOperations {
 	}
 
 	private void initAdjMatrix() {
-		labelDirections = new LabelProperties[vertexCount];
+		labelProperties = new LabelProperties[vertexCount];
 		adjMatrix = new Position[vertexCount][vertexCount];
 		for (int i = 0; i < vertexCount; i++) {
-			labelDirections[i] = null;
+			labelProperties[i] = null;
 			for (int j = 0; j < vertexCount; j++) {
 				adjMatrix[i][j] = null;
 			}
@@ -142,16 +153,26 @@ public class MXMacGraphOperations {
 		return regions[x][y];
 	}
 	
-	private int getNearestViableLabel(Position position, Position dirVector) {
+	private Pair<Integer, Position> getNearestViableLabel(Position position, Position dirVector) {
 		double pX = position.getXCoord(), pY = position.getYCoord();
+		double iX = -1, iY = -1, selectedX = -1, selectedY = -1;
 		char region = getRegionFromPosition(position);
 		List<Integer> labels = regionLabels.get(region);
 		int nearestLabel = -1;
 		double nearestDistance = Double.POSITIVE_INFINITY;
 		for (int label : labels) {
-			Position dir = labelDirections[label].direction;
-			double propPos = labelDirections[label].fieldProportion;
-			double distance = (dir.getXCoord() != 0) ? (propPos * MAX_Y - pY) : (propPos * MAX_X - pX);
+			Position dir = labelProperties[label].direction;
+			double propPos = labelProperties[label].fieldProportion;
+			double distance;
+			if (dir.getXCoord() != 0) {
+				distance = propPos * MAX_Y - pY;
+				iX = pX;
+				iY = propPos * MAX_Y;
+			} else {
+				distance = propPos * MAX_X - pX;
+				iX = propPos * MAX_X;
+				iY = pY;
+			}
 			if (distance < nearestDistance) {
 				double dirX = dir.getXCoord(), dirY = dir.getYCoord();
 				double dirVX = dirVector.getXCoord(), dirVY = dirVector.getYCoord();
@@ -159,22 +180,27 @@ public class MXMacGraphOperations {
 						|| (dirY != 0 && dirY * dirVY >= 0)) {
 					nearestLabel = label;
 					nearestDistance = distance;
+					selectedX = iX;
+					selectedY = iY;
 				}
 			}
 		}
-		return nearestLabel;
+		if (nearestLabel >= 0) {
+			return new Pair<Integer, Position>(nearestLabel, new Position(selectedX, selectedY));
+		}
+		return null;
 	}
 	
-	private Pair<Integer, Integer> getBestLabelPair(Position source, Position target, boolean goingFrom) {
+	private Pair<Pair<Integer, Position>, Pair<Integer, Position>> getBestLabelPair(Position source, Position target) {
 		double sX = source.getXCoord(), sY = source.getYCoord();
 		double tX = target.getXCoord(), tY = target.getYCoord();
 		double moveDirX = tX - sX;
 		double moveDirY = tY - sY;
 		Position dirVector = new Position(moveDirX, moveDirY);
-		int s = getNearestViableLabel(source, dirVector);
-		int t = getNearestViableLabel(target, dirVector);
-		if (s == -1 || t == -1) return null;
-		return new Pair<Integer, Integer>(s, t);
+		Pair<Integer, Position> s = getNearestViableLabel(source, dirVector);
+		Pair<Integer, Position> t = getNearestViableLabel(target, dirVector);
+		if (s == null || t == null) return null;
+		return new Pair<Pair<Integer, Position>, Pair<Integer, Position>>(s, t);
 	}
 	
 	private int getMinimumVertex(boolean[] mst, double[] key) {
@@ -197,7 +223,7 @@ public class MXMacGraphOperations {
 		queue.add(currentIndex);
 	}
 	
-	public Entry<Double, Queue<Integer>> getshortestPath(int source, int target, Position enter, Position exit) {
+	private Entry<Double, Queue<Integer>> getshortestPath(int source, int target, Position enter, Position exit) {
 		boolean[] shortestPathTree = new boolean[vertexCount];
 		double[] distances = new double[vertexCount];
 		int[] parents = new int[vertexCount];
@@ -237,9 +263,28 @@ public class MXMacGraphOperations {
 		return shortestPathToTarget;
 	}
 	
+	public CalculationResults getShortestPath(Position source, Position target) {
+		Pair<Pair<Integer, Position>, Pair<Integer, Position>> bestLabels = getBestLabelPair(source, target);
+		if (bestLabels == null) return null;
+		Pair<Integer, Position> s = bestLabels.first;
+		Pair<Integer, Position> t = bestLabels.second;
+		int inLabel = s.first;
+		int outLabel = t.first;
+		double totalDistance = MEAN_PREAMBLE_COUNT_NORMAL * 
+				(source.getDistance(s.second) + target.getDistance(t.second)) /
+				MEAN_HOP_DISTANCE;
+		Entry<Double, Queue<Integer>> dijkstra = getshortestPath(inLabel, outLabel, s.second, t.second);
+		totalDistance += dijkstra.getLeft();
+		return new CalculationResults(new Pair<Double, Queue<Integer>>(totalDistance, dijkstra.getRight()), bestLabels.first.second);
+	}
 	
+	public Position getDirectionFromLabel(int label) {
+		return labelProperties[label].direction;
+	}
 	
-	
+	public boolean checkLabelClassCompatibility(byte label, Position travelDirection) {
+		return travelDirection.equals(labelProperties[label].direction);
+	}
 	
 	
 	

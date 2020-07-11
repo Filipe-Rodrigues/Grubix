@@ -19,8 +19,9 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 package br.ufla.dcc.PingPong.MXMac;
 
 import static br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager.MXMAC_CONFIG;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
 import br.ufla.dcc.PingPong.MXMac.MXMacState.MXMacEventType;
@@ -29,7 +30,7 @@ import br.ufla.dcc.PingPong.physicalMX.EventCarrierSense;
 import br.ufla.dcc.PingPong.physicalMX.EventCollisionDetect;
 import br.ufla.dcc.PingPong.physicalMX.EventPhyTurnRadio;
 import br.ufla.dcc.PingPong.physicalMX.StartOfFrameDelimiter;
-import br.ufla.dcc.PingPong.routing.USAMac.USAMacRoutingControlPacket;
+import br.ufla.dcc.PingPong.routing.MXMac.MXMacRoutingControlPacket;
 import br.ufla.dcc.grubix.simulator.Direction;
 import br.ufla.dcc.grubix.simulator.LayerType;
 import br.ufla.dcc.grubix.simulator.NodeId;
@@ -101,7 +102,7 @@ public class MXMac extends MACLayer {
 	private ToolsMiscellaneous misc = ToolsMiscellaneous.getInstance();
 	
 	/** Lista de vizinhos backbone, para facilitar o controle de mudança de canal */
-	private List<Pair<NodeId, Integer>> backboneNeighbors = null;
+	private Map<NodeId, Integer> backboneNeighbors = null;
 
 	/**
 	 * Função padrão do Grubix para fazer a configuração do objeto
@@ -109,6 +110,9 @@ public class MXMac extends MACLayer {
 	 * @throws ConfigurationException thrown when the object cannot run with the
 	 *                                configured values.
 	 */
+	
+	private static final BackboneConfigurationManager savestate = BackboneConfigurationManager.getInstance(MXMAC_CONFIG);
+	
 	public void initConfiguration(Configuration config) throws ConfigurationException {
 		super.initConfiguration(config);
 
@@ -136,22 +140,30 @@ public class MXMac extends MACLayer {
 	 */
 	protected void processEvent(StartSimulation start) {
 		// Define o novo estado e duração, e incrementa a sequência de estado
-		if (BackboneConfigurationManager.getInstance(MXMAC_CONFIG).amIBackbone(node.getId())) {
-			switchToBackbone(BackboneConfigurationManager.getInstance(MXMAC_CONFIG).getBackboneNodeChannel(node.getId()));
-			xConf.setCycleSyncTiming(BackboneConfigurationManager.getInstance(MXMAC_CONFIG).getNodeCycleSyncTiming(node.getId()));
+		if (savestate.amIBackbone(node.getId())) {
+			switchToBackbone(savestate.getBackboneNodeChannel(node.getId()));
+			xConf.setCycleSyncTiming(savestate.getNodeCycleSyncTiming(node.getId()));
+			xConf.setBackboneType(savestate.getBackboneNodeChannel(node.getId()));
 		}
+		loadBackboneNeighborhood();
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();
-//		if (node.getId().asInt() == 755 || node.getId().asInt() == 533) {
-//			System.err.println("#" + node.getId() + ": " + xConf.getCycleSyncTimingRatio());
-//		}
+
+		if (node.getId().asInt() == 1006 || node.getId().asInt() == 509 || node.getId().asInt() == 485) {
+			System.err.println("Node #" + node.getId() + ": " + backboneNeighbors);
+			System.err.println("************************");
+		}
 		// testBackbone();
 	}
 
 	private boolean switchToBackbone(int bbType) {
 		if (xConf.getBackboneType() == MXMacConstants.NON_BB_CHANNEL) {
 			xConf.setBackboneType(bbType);
-			misc.vGrubix(node.getId(), "Backbone", "DARK_BLUE");
+			if (bbType == MXMacConstants.CLOCKWISE_BB_CHANNEL) {
+				misc.vGrubix(node.getId(), "Backbone CW", "DARK_BLUE");
+			} else {
+				misc.vGrubix(node.getId(), "Backbone CCW", "DARK_RED");
+			}
 			return true;
 		}
 		return false;
@@ -171,21 +183,24 @@ public class MXMac extends MACLayer {
 			return xConf.getBackboneType();
 		} else {
 			if (backboneNeighbors != null) {
-				for (Pair<NodeId, Integer> neighbor : backboneNeighbors) {
-					if (id.equals(neighbor.first)) {
-						return neighbor.second;
-					}
+				if (backboneNeighbors.containsKey(id)) {
+					return backboneNeighbors.get(id);
 				}
 			}
 		}
 		return MXMacConstants.NON_BB_CHANNEL;
 	}
 	
-	private void addBackboneNeighbor(NodeId id, int backboneWay) {
-		if (backboneNeighbors == null) {
-			backboneNeighbors = new ArrayList<Pair<NodeId, Integer>>();
+	private void loadBackboneNeighborhood() {
+		backboneNeighbors = new HashMap<NodeId, Integer>();
+		List<NodeId> bbNeigh1 = savestate.loadBackboneNeighborsMXMacType1(node.getId());
+		List<NodeId> bbNeigh2 = savestate.loadBackboneNeighborsMXMacType2(node.getId());
+		for (NodeId neigh : bbNeigh1) {
+			backboneNeighbors.put(neigh, MXMacConstants.CLOCKWISE_BB_CHANNEL);
 		}
-		backboneNeighbors.add(new Pair<NodeId, Integer>(id, backboneWay));
+		for (NodeId neigh : bbNeigh2) {
+			backboneNeighbors.put(neigh, MXMacConstants.COUNTER_CLOCKWISE_BB_CHANNEL);
+		}
 	}
 	
 	/**
@@ -293,12 +308,13 @@ public class MXMac extends MACLayer {
 			return;
 		}
 
-		if (llPacket.getEnclosedPacket() instanceof USAMacRoutingControlPacket) {
+		if (llPacket.getEnclosedPacket() instanceof MXMacRoutingControlPacket) {
 			// System.err.println("FOI");
-			switchToBackbone();
+			MXMacRoutingControlPacket ctrlPack = (MXMacRoutingControlPacket) llPacket.getEnclosedPacket();
+			switchToBackbone(ctrlPack.getBackboneType());
 			if (xConf.getCycleSyncTimingRatio() < 0) {
 				xConf.setCycleSyncTiming((double) (SimulationManager.getInstance().getCurrentTime() % 1000) / 1000d);
-				BackboneConfigurationManager.getInstance().setNodeCycleSyncTiming(node.getId(), 0);
+				savestate.setNodeCycleSyncTiming(node.getId(), 0);
 			}
 		}
 
@@ -329,7 +345,7 @@ public class MXMac extends MACLayer {
 			if (node.getId().equals(nextBB)) {
 				double cycleShiftRatio = bbPacket.getParentBackboneCycleShiftRatio();
 				xConf.updateCycleSyncTiming(cycleShiftRatio);
-				BackboneConfigurationManager.getInstance(MXMAC_CONFIG).setNodeCycleSyncTiming(node.getId(), xConf.getCycleSyncTimingRatio());
+				savestate.setNodeCycleSyncTiming(node.getId(), xConf.getCycleSyncTimingRatio());
 			}
 		}
 
@@ -382,12 +398,12 @@ public class MXMac extends MACLayer {
 		 * Se não foi criado um novo estado, continua no estado anterior, marcando o
 		 * tempo anterior. Apenas execute as ações previstas
 		 */
-		int channel = loadChannelConfiguration();
+		int channelOption = loadChannelConfiguration();
 		switch (xState.getAction()) {
 
 		case ASK_CHANNEL:
 			/* Manda ligar o rádio - será ligado no estado LISTEN */
-			sendEventDown(new EventPhyTurnRadio(this.sender, true, channel));
+			sendEventDown(new EventPhyTurnRadio(this.sender, true, channelOption));
 			/*
 			 * Pergunta ao rádio se canal está ocupado - PHY enviará um evento com resposta
 			 */
@@ -400,17 +416,17 @@ public class MXMac extends MACLayer {
 
 		case TURN_ON:
 			/* Manda ligar o rádio - será ligado no estado LISTEN */
-			sendEventDown(new EventPhyTurnRadio(this.sender, true, channel));
+			sendEventDown(new EventPhyTurnRadio(this.sender, true, channelOption));
 			break;
 
 		case TURN_OFF:
 			/* Manda desligar o rádio - estado OFF */
-			sendEventDown(new EventPhyTurnRadio(this.sender, false, channel));
+			sendEventDown(new EventPhyTurnRadio(this.sender, false, channelOption));
 			break;
 			
 		case TURN_OFF_CS_END:
 			/* Manda desligar o rádio - estado OFF */
-			sendEventDown(new EventPhyTurnRadio(this.sender, false, channel));
+			sendEventDown(new EventPhyTurnRadio(this.sender, false, channelOption));
 			sendEventTo(new EventFinishedCSEnd(sender), LayerType.NETWORK);
 			break;
 
@@ -604,9 +620,9 @@ public class MXMac extends MACLayer {
 	/** Função para criar pacotes do tipo DATA */
 	private MXMacPacket createDataPacket(LogLinkPacket packet, boolean ACKreq) {
 		MXMacPacket newPacket;
-		if (BackboneConfigurationManager.getInstance(MXMAC_CONFIG).amIBackbone(node.getId())) {
-			NodeId nextBB = BackboneConfigurationManager.getInstance(MXMAC_CONFIG).getNextBackboneNode(node.getId());
-			newPacket = new MXMacBackbonePacket(this.sender, packet, ACKreq, nextBB, xConf.getCycleSyncTimingRatio());
+		if (savestate.amIBackbone(node.getId())) {
+			NodeId nextBB = savestate.getNextBackboneNode(node.getId());
+			newPacket = new MXMacBackbonePacket(this.sender, packet, ACKreq, xConf.getBackboneType(), nextBB, xConf.getCycleSyncTimingRatio());
 		} else {
 			newPacket = new MXMacPacket(this.sender, packet, ACKreq);
 		}

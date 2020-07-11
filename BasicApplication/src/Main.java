@@ -17,11 +17,13 @@ public class Main {
 
 			
 			//Simulator.main(new String[]{"GERADOR_USAMAC.xml", "true", "false", "USAMAC"});
+			//Simulator.main(new String[]{"GERADOR_MXMAC.xml", "true", "false", "MXMAC"});
 			
 			
 			//Simulator.main(new String[]{"TESTE_XMAC.xml", "false", "true", "N/A"});
 			//Simulator.main(new String[]{"TESTE_EXMAC.xml", "false", "true", "N/A"});
-			Simulator.main(new String[]{"TESTE_USAMAC.xml", "false", "true", "USAMAC"});
+			//Simulator.main(new String[]{"TESTE_USAMAC.xml", "false", "true", "USAMAC"});
+			Simulator.main(new String[]{"TESTE_MXMAC.xml", "false", "true", "MXMAC"});
 			
 			long endTime   = System.currentTimeMillis();
 			long totalTime = endTime - startTime;

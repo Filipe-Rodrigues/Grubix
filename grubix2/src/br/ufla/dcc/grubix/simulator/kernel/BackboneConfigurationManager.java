@@ -71,6 +71,7 @@ public class BackboneConfigurationManager implements Serializable {
 	}
 	
 	private static void loadConfiguration(int protocolType) {
+		System.out.println("File usage: " + usingFile);
 		String fileName = "config" + ((protocolType == USAMAC_CONFIG) ? ("USAMac") : ("MXMac")) + ".dat";
 		try {
 			if (usingFile) {
@@ -82,10 +83,11 @@ public class BackboneConfigurationManager implements Serializable {
 				//loadTestNodes();
 				//System.err.println("SUCESSO!! Objeto de configuraÃ§Ã£o foi carregado!");
 			} else {
-				throw new Exception();
+				throw new Exception("Not using file!");
 			}
 		} catch (Exception e) {
-			System.err.println("NÃ£o encontrei uma configuraÃ§Ã£o de backbone, inicializando uma nova...");
+			System.err.println("Não encontrei uma configuração de backbone, inicializando uma nova...");
+			System.err.println("Exception thrown: " + e.getMessage());
 			singleton = new BackboneConfigurationManager();
 		}
 	}
@@ -105,7 +107,7 @@ public class BackboneConfigurationManager implements Serializable {
 	
 	public boolean amIBackbone(NodeId myId) {
 		if (allNodesConfigurations.containsKey(myId)) {
-			return allNodesConfigurations.get(myId).backboneChannel > 0;
+			return allNodesConfigurations.get(myId).nextBackboneNode != null;
 		}
 		return false;
 	}
@@ -131,11 +133,18 @@ public class BackboneConfigurationManager implements Serializable {
 		return new ArrayList<NodeId>();
 	}
 	
-	public List<Pair<NodeId, Integer>> loadBackboneNeighborsMXMac(NodeId myId) {
+	public List<NodeId> loadBackboneNeighborsMXMacType1(NodeId myId) {
 		if (allNodesConfigurations.containsKey(myId)) {
-			return allNodesConfigurations.get(myId).backboneNeighborsMXMac;
+			return allNodesConfigurations.get(myId).backboneNeighborsMXMacType1;
 		}
-		return new ArrayList<Pair<NodeId, Integer>>();
+		return new ArrayList<NodeId>();
+	}
+	
+	public List<NodeId> loadBackboneNeighborsMXMacType2(NodeId myId) {
+		if (allNodesConfigurations.containsKey(myId)) {
+			return allNodesConfigurations.get(myId).backboneNeighborsMXMacType2;
+		}
+		return new ArrayList<NodeId>();
 	}
 	
 	private void ensureNodeRegistration(NodeId myId) {
@@ -157,7 +166,7 @@ public class BackboneConfigurationManager implements Serializable {
 	
 	public void addBackboneNeighbor(NodeId myId, NodeId neighborId, int bbChannel) {
 		ensureNodeRegistration(myId);
-		allNodesConfigurations.get(myId).backboneNeighborsMXMac.add(new Pair<NodeId, Integer>(neighborId, bbChannel));
+		allNodesConfigurations.get(myId).addBackboneNeighborMXMac(neighborId, bbChannel);
 	}
 	
 	public void setBackboneNodeLabel(NodeId myId, byte label) {

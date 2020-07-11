@@ -30,11 +30,15 @@ public class BackboneDistributor {
 	}
 	
 	private Node selectNext(MXMacRoutingParameters params) {
-		Position myPosition = params.node.getPosition();
-		Position target = getTargetFromDirection(params.hypocenter, params.direction);
-		Node selected = params.node;
+		Position myPosition = params.getNode().getPosition();
+		Position target = getTargetFromDirection(params.getHypocenter(), params.getDirection());
+		System.err.println("HYPO: " + params.getHypocenter());
+		System.err.println("DIR: " + params.getDirection());
+		System.err.println("TARGET: " + target);
+		System.err.println("\n*****************************\n");
+		Node selected = params.getNode();
 		double minDistance = myPosition.getDistance(target);
-		for (Node neighbor : params.neighbors) {
+		for (Node neighbor : params.getNeighbors()) {
 			if (!canSelect(neighbor, params)) continue;
 			double neighDistance = neighbor.getPosition().getDistance(target);
 			if (neighDistance < minDistance) {
@@ -47,9 +51,7 @@ public class BackboneDistributor {
 	
 	private boolean canSelect(Node node, MXMacRoutingParameters params) {
 		return (node.getId().asInt() < 10 || node.getId().asInt() > 17)
-			   && (params.backboneType == 1)
-				? (!params.bbNeighborsType1.contains(node))
-				: (!params.bbNeighborsType2.contains(node));
+			   && !params.isNeighborBackbone(node);
 	}
 	
 	private Position getTargetFromDirection(Position source, Position direction) {
@@ -59,7 +61,7 @@ public class BackboneDistributor {
 		x = (dirX == 0) ? (sX) : (MAX_X * dirX);
 		y = (dirY == 0) ? (sY) : (MAX_Y * dirY);
 		x = (x < 0) ? (0) : (x);
-		x = (y < 0) ? (0) : (y);
+		y = (y < 0) ? (0) : (y);
 		return new Position(x, y);
 	}
 	

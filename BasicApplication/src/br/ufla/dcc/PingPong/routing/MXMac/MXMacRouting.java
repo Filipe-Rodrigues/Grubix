@@ -35,46 +35,6 @@ public class MXMacRouting extends NetworkLayer {
 	
 	/** Objeto para a depuração */
 	ToolsDebug debug = ToolsDebug.getInstance();
-
-	
-	private void startupNeighborList() {
-		bbSettings = new MXMacRoutingParameters(node);
-	}
-	
-	/** Função para obter o nó vizinho mais próximo do destino */
-	private NodeId getMinDistanceNodeId(Position destinationPosition) {
-		NodeId minDistanceNodeId = null;
-		double minDistance = node.getPosition().getDistance(destinationPosition);
-
-		for (Node neighbor : bbSettings.neighbors) {
-			Position position = neighbor.getPosition();
-			neighbor.setPosition(position);
-			double distance = position.getDistance(destinationPosition);
-			
-			if (distance < minDistance) {
-				minDistance = distance;
-				minDistanceNodeId = neighbor.getId();
-			}
-		}
-		return minDistanceNodeId;
-	}
-	
-	private void routePacketGeoRouting (Packet packet) {
-		Position destinationPosition = SimulationManager.getInstance().
-				queryNodeById(packet.getReceiver()).getPosition();
-
-		NodeId closestId = getMinDistanceNodeId(destinationPosition);
-		if (closestId == null) {
-			System.err.println(this.id + " >>>> BURACO ENCONTRADO, SAINDO DA APLICAÇÃO!!!");
-			SingletonTestResult.getInstance().setEndingTime(-1);
-			SingletonTestResult.getInstance().printAllStats();
-			System.exit(1);
-		}
-		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);
-		
-		sendPacket(newPacket);		
-	}
-	
 	
 	@Override
 	public void lowerSAP(Packet packet) throws LayerException {
@@ -113,10 +73,9 @@ public class MXMacRouting extends NetworkLayer {
 	@Override
 	protected void processEvent(StartSimulation start) {
 		super.processEvent(start);
-		startupNeighborList();
-		if (Configuration.getInstance().getPositionGenerator() instanceof FromConfigStartPositions) {
-			loadBackboneConfiguration();
-		} else {
+		boolean loadingFromFile = Configuration.getInstance().getPositionGenerator() instanceof FromConfigStartPositions;
+		startupNeighborList(loadingFromFile);
+		if (!loadingFromFile) {
 			startBackboneConfiguration();
 		}
 	}
@@ -133,10 +92,44 @@ public class MXMacRouting extends NetworkLayer {
 		}
 	}
 	
-	private void loadBackboneConfiguration() {
-		
+	private void startupNeighborList(boolean loadSaved) {
+		bbSettings = new MXMacRoutingParameters(node, loadSaved);
 	}
+	
+	/** Função para obter o nó vizinho mais próximo do destino */
+	private NodeId getMinDistanceNodeId(Position destinationPosition) {
+		NodeId minDistanceNodeId = null;
+		double minDistance = node.getPosition().getDistance(destinationPosition);
 
+		for (Node neighbor : bbSettings.getNeighbors()) {
+			Position position = neighbor.getPosition();
+			neighbor.setPosition(position);
+			double distance = position.getDistance(destinationPosition);
+			
+			if (distance < minDistance) {
+				minDistance = distance;
+				minDistanceNodeId = neighbor.getId();
+			}
+		}
+		return minDistanceNodeId;
+	}
+	
+	private void routePacketGeoRouting (Packet packet) {
+		Position destinationPosition = SimulationManager.getInstance().
+				queryNodeById(packet.getReceiver()).getPosition();
+
+		NodeId closestId = getMinDistanceNodeId(destinationPosition);
+		if (closestId == null) {
+			System.err.println(this.id + " >>>> BURACO ENCONTRADO, SAINDO DA APLICAÇÃO!!!");
+			SingletonTestResult.getInstance().setEndingTime(-1);
+			SingletonTestResult.getInstance().printAllStats();
+			System.exit(1);
+		}
+		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);
+		
+		sendPacket(newPacket);		
+	}
+	
 	private void startBackboneConfiguration() {
 		int id = node.getId().asInt();
 		switch (id) {
@@ -170,10 +163,10 @@ public class MXMacRouting extends NetworkLayer {
 	}
 	
 	private void turnIntoBackbone(Position direction, int type, int delayLevel) {
-		bbSettings.backboneType = type;
-		bbSettings.direction = direction;
-		bbSettings.hypocenter = node.getPosition();
-		expandBackbone();
+		bbSettings.setBackboneType(type);
+		bbSettings.setHypocenter(node.getPosition());
+		bbSettings.setDirection(direction);
+		expandBackbone(BackboneDistributor.selectNextBackboneNode(bbSettings));
 		if (delayLevel > 0) {
 			sendEventSelf(new BackboneNotificationWUC(sender, BASE_DELAY_FOR_BB_FORMATION * delayLevel));
 		} else {
@@ -182,28 +175,30 @@ public class MXMacRouting extends NetworkLayer {
 	}
 	
 	private void turnIntoBackbone(MXMacRoutingControlPacket controlPack) {
-		bbSettings.backboneType = controlPack.getBackboneType();
-		bbSettings.direction = controlPack.getGrowthDirection();
-		bbSettings.hypocenter = controlPack.getBackboneLineRoot();
+		bbSettings.setBackboneType(controlPack.getBackboneType());
+		bbSettings.setHypocenter(controlPack.getBackboneLineRoot());
+		bbSettings.setDirection(controlPack.getGrowthDirection());
 		if (BackboneDistributor.canExpandBackbone(node)) {
-			expandBackbone();
+			expandBackbone(BackboneDistributor.selectNextBackboneNode(bbSettings));
 		} else {
-			bbSettings.nextBBnode = node;
+			expandBackbone(node);
+			
 		}
 		announceConversion();
 	}
 
-	private void expandBackbone() {
-		bbSettings.nextBBnode = BackboneDistributor.selectNextBackboneNode(bbSettings);
+	private void expandBackbone(Node nextBBnode) {
+		bbSettings.setNextBBnode(nextBBnode);
 	}
 	
 	private void announceConversion() {
+		//System.err.println("STARTED " + node.getId() + ": " + bbSettings.backboneType);
 		MXMacRoutingControlPacket packet = new MXMacRoutingControlPacket(sender, NodeId.ALLNODES, 
-				bbSettings.direction, bbSettings.hypocenter, (bbSettings.nextBBnode == node) 
+				bbSettings.getDirection(), bbSettings.getHypocenter(), (bbSettings.getNextBBnode().equals(node)) 
 				? (null) 
-				: (bbSettings.nextBBnode.getId()), bbSettings.backboneType);
+				: (bbSettings.getNextBBnode().getId()), bbSettings.getBackboneType());
 		BackboneConfigurationManager.getInstance(MXMAC_CONFIG).setNextBackboneNode(node.getId(), 
-				bbSettings.nextBBnode.getId(), bbSettings.direction);
+				bbSettings.getNextBBnode().getId(), bbSettings.getDirection());
 		sendPacket(packet);
 	}
 	
