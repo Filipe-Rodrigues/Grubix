@@ -5,6 +5,10 @@ import static br.ufla.dcc.PingPong.MXMac.MXMacConstants.COUNTER_CLOCKWISE_BB_CHA
 import static br.ufla.dcc.PingPong.routing.MXMac.AuxiliarConstants.*;
 import static br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager.MXMAC_CONFIG;
 
+import java.util.Queue;
+
+import br.ufla.dcc.PingPong.routing.MXMac.MXMacGraphOperations.CalculationResults;
+
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.movement.FromConfigStartPositions;
 import br.ufla.dcc.PingPong.routing.GeoRoutingPacket;
@@ -21,6 +25,7 @@ import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 import br.ufla.dcc.grubix.simulator.node.NetworkLayer;
 import br.ufla.dcc.grubix.simulator.node.Node;
+import br.ufla.dcc.grubix.simulator.util.Pair;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
 public class MXMacRouting extends NetworkLayer {
@@ -35,6 +40,8 @@ public class MXMacRouting extends NetworkLayer {
 	
 	/** Objeto para a depuração */
 	ToolsDebug debug = ToolsDebug.getInstance();
+	
+	private MXMacGraphOperations graphOps = MXMacGraphOperations.getInstance();
 	
 	@Override
 	public void lowerSAP(Packet packet) throws LayerException {
@@ -59,6 +66,8 @@ public class MXMacRouting extends NetworkLayer {
 			if (nextBB != null && nextBB.equals(node.getId())) {
 				turnIntoBackbone(controlPack);
 			}
+		} else if (packet instanceof MXMacRoutingPacket) {
+			
 		}
 	}
 
@@ -66,10 +75,9 @@ public class MXMacRouting extends NetworkLayer {
 	@Override
 	public void upperSAP(Packet packet) throws LayerException {		
 		debug.write(debug.strPkt(packet), sender);
-		routePacketGeoRouting(packet);
+		chooseRoutingProcedure(packet);
 	}
 
-	
 	@Override
 	protected void processEvent(StartSimulation start) {
 		super.processEvent(start);
@@ -202,4 +210,56 @@ public class MXMacRouting extends NetworkLayer {
 		sendPacket(packet);
 	}
 	
+	private void chooseRoutingProcedure(Packet packet) {
+		Position thisNode = node.getPosition();
+		Position destination = SimulationManager.getInstance().
+				queryNodeById(packet.getReceiver()).getPosition();
+		CalculationResults results = graphOps.getShortestPath(thisNode, destination);
+		double normalRouteWeight = graphOps.getGeoRoutingDistance(thisNode, destination);
+		double backboneRouteWeight = results.getDistance();
+		if (normalRouteWeight <= backboneRouteWeight) {
+			routePacketGeoRouting(packet);
+		} else {
+			routePacketInBackbone(packet, results.getBackboneRoute());
+		}
+	}
+	
+	private void routePacketInBackbone(Packet packet, Queue<Pair<Integer, Position>> backboneSegments) {
+		if (!backboneSegments.isEmpty()) {
+			Pair<Integer, Position> segment = backboneSegments.peek();
+			boolean sent = false;
+			if (bbSettings.amIBackbone()) {
+				NodeId nextBBnode = bbSettings.getNextBBnode().getId();
+				
+			}
+		}
+	}
+	
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

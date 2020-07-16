@@ -54,7 +54,7 @@ public class BackboneDistributor {
 			   && !params.isNeighborBackbone(node);
 	}
 	
-	private Position getTargetFromDirection(Position source, Position direction) {
+	public static Position getTargetFromDirection(Position source, Position direction) {
 		double x, y;
 		double dirX = direction.getXCoord(), dirY = direction.getYCoord();
 		double sX = source.getXCoord(), sY = source.getYCoord();

@@ -285,14 +285,14 @@ public class PhysicalMX extends PhysicalLayer {
 			if (wuc instanceof EventPhyTurnRadio){
 				// Se TRUE, a ordem é para ligar, se FALSE, para desligar
 				if (((EventPhyTurnRadio)wuc).IsTheRadioOn()) {
+					phyRadioState.setCurrentChannel(((EventPhyTurnRadio)wuc).getChannel());
 					/* O rádio é ligado no estado LISTENING, mas somente se estiver OFF.
 					 * Se estiver em outro estado, nada será feito.                      */
 					if (phyRadioState.getRadioState() == RadioState.OFF) {
 						phyRadioState.setRadioState(RadioState.LISTENING);
-						phyRadioState.setCurrentChannel(((EventPhyTurnRadio)wuc).getChannel());
 			    		// Filtro para o VisualGrubix
 						SimulationManager.logNodeState(node.getId(), "Radio", "int", String.valueOf(3));
-					} 
+					}
 				} else {
 					/* Desliga o rádio, não importando qual seja o estado atual */
 		    		phyRadioState.setRadioState(RadioState.OFF);

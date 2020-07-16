@@ -149,10 +149,6 @@ public class MXMac extends MACLayer {
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();
 
-		if (node.getId().asInt() == 1006 || node.getId().asInt() == 509 || node.getId().asInt() == 485) {
-			System.err.println("Node #" + node.getId() + ": " + backboneNeighbors);
-			System.err.println("************************");
-		}
 		// testBackbone();
 	}
 
@@ -170,7 +166,7 @@ public class MXMac extends MACLayer {
 	}
 
 	private int loadChannelConfiguration() {
-		if (xState.getRadioChannelMode() == MXMacConstants.TUNE_INTO_NEIGHBOR_CHANNEL && xState.isDataPending()) {
+		if (xState.getRadioChannelMode() == MXMacConstants.TUNE_INTO_NEIGHBOR_CHANNEL) {
 			return getNodeBackboneType(xState.getDataPkt().getReceiver());
 		} else if (xState.getRadioChannelMode() == MXMacConstants.RESTORE_DEFAULT_CHANNEL) {
 			return getNodeBackboneType(node.getId());
@@ -399,6 +395,7 @@ public class MXMac extends MACLayer {
 		 * tempo anterior. Apenas execute as ações previstas
 		 */
 		int channelOption = loadChannelConfiguration();
+		
 		switch (xState.getAction()) {
 
 		case ASK_CHANNEL:

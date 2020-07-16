@@ -71,7 +71,6 @@ public class BackboneConfigurationManager implements Serializable {
 	}
 	
 	private static void loadConfiguration(int protocolType) {
-		System.out.println("File usage: " + usingFile);
 		String fileName = "config" + ((protocolType == USAMAC_CONFIG) ? ("USAMac") : ("MXMac")) + ".dat";
 		try {
 			if (usingFile) {

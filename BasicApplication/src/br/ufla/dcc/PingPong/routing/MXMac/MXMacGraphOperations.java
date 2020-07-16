@@ -32,12 +32,57 @@ public class MXMacGraphOperations {
 	}
 	
 	class CalculationResults {
-		Pair<Double, Queue<Integer>> dijkstraResults;
-		Position backboneEntrance;
+		private Pair<Double, Queue<Integer>> dijkstraResults;
+		private Position virtualTarget;
 		
-		public CalculationResults(Pair<Double, Queue<Integer>> dijkstra, Position entrance) {
+		public CalculationResults(Pair<Double, Queue<Integer>> dijkstra, Position source, Position entrance) {
 			dijkstraResults = dijkstra;
-			backboneEntrance = entrance;
+			virtualTarget = getVirtualTargetFromEntrance(source, entrance);
+		}
+		
+		private Position getVirtualTargetFromEntrance(Position source, Position entrance) {
+			double sX = source.getXCoord(), sY = source.getYCoord();
+			double eX = entrance.getXCoord(), eY = entrance.getYCoord();
+			double iX, iY;
+			
+			if ((eX - sX) == 0) {
+				iX = sX;
+				if ((eY - sY) > 0) {
+					iY = MAX_Y;
+				} else {
+					iY = 0;
+				}
+			} else {
+				iY = sY;
+				if ((eX - sX) > 0) {
+					iX = MAX_X;
+				} else {
+					iX = 0;
+				}
+			}
+			
+			return new Position(iX, iY);
+		}
+		
+		public Position getVirtualTarget() {
+			return virtualTarget;
+		}
+		
+		public double getDistance() {
+			return dijkstraResults.first;
+		}
+		
+		public Queue<Pair<Integer, Position>> getBackboneRoute() {
+			Integer bbSegment;
+			Position direction = null;
+			Queue<Pair<Integer, Position>> route = new LinkedList<Pair<Integer,Position>>();
+			while ((bbSegment = dijkstraResults.second.poll()) != null) {
+				if (direction != null && direction.equals(labelProperties[bbSegment].direction)) continue;
+				int channel = 2 - (bbSegment % 2);
+				direction = labelProperties[bbSegment].direction;
+				route.add(new Pair<Integer, Position>(channel, direction));
+			}
+			return route;
 		}
 	}
 	
@@ -73,7 +118,7 @@ public class MXMacGraphOperations {
 		regions = new char[3][3];
 		regionLabels = new HashMap<Character, List<Integer>>();
 		for (int i = 0; i < 9; i++) {
-			regions[i / 3][i % 3] = (char) ('A' + i);
+			regions[i % 3][i / 3] = (char) ('A' + i);
 			regionLabels.put((char) ('A' + i), new ArrayList<Integer>());
 		}
 	}
@@ -157,6 +202,7 @@ public class MXMacGraphOperations {
 		double pX = position.getXCoord(), pY = position.getYCoord();
 		double iX = -1, iY = -1, selectedX = -1, selectedY = -1;
 		char region = getRegionFromPosition(position);
+		//System.err.println("REGION DATA: " + position + " => " + region);
 		List<Integer> labels = regionLabels.get(region);
 		int nearestLabel = -1;
 		double nearestDistance = Double.POSITIVE_INFINITY;
@@ -165,15 +211,15 @@ public class MXMacGraphOperations {
 			double propPos = labelProperties[label].fieldProportion;
 			double distance;
 			if (dir.getXCoord() != 0) {
-				distance = propPos * MAX_Y - pY;
+				distance = Math.abs(propPos * MAX_Y - pY);
 				iX = pX;
 				iY = propPos * MAX_Y;
 			} else {
-				distance = propPos * MAX_X - pX;
+				distance = Math.abs(propPos * MAX_X - pX);
 				iX = propPos * MAX_X;
 				iY = pY;
 			}
-			if (distance < nearestDistance) {
+			if (distance <= nearestDistance) {
 				double dirX = dir.getXCoord(), dirY = dir.getYCoord();
 				double dirVX = dirVector.getXCoord(), dirVY = dirVector.getYCoord();
 				if ((dirX != 0 && dirX * dirVX >= 0)
@@ -204,7 +250,7 @@ public class MXMacGraphOperations {
 	}
 	
 	private int getMinimumVertex(boolean[] mst, double[] key) {
-		double minKey = Double.NEGATIVE_INFINITY;
+		double minKey = Double.POSITIVE_INFINITY;
 		int vertex = -1;
 		for (int i = 0; i < vertexCount; i++) {
 			if (mst[i] == false && minKey > key[i]) {
@@ -252,8 +298,10 @@ public class MXMacGraphOperations {
 				}
 			}
 		}
+
 		Queue<Integer> path = new LinkedList<Integer>();
 		double totalDistance = distances[target] + enterPositions[target].getDistance(exit);
+		totalDistance *= MEAN_PREAMBLE_COUNT_BACKBONE / MEAN_HOP_DISTANCE;
 		fillPathQueue(path, parents, target);
 		Entry<Double, Queue<Integer>> shortestPathToTarget = new Entry<Double, Queue<Integer>>
 		(totalDistance, path);
@@ -261,6 +309,14 @@ public class MXMacGraphOperations {
 		//System.out.println("PATH DISTANCE: " + totalDistance);
 		//printDijkstra(source, distances, parents);
 		return shortestPathToTarget;
+	}
+	
+	private void print(double[] v) {
+		System.err.print("[");
+		for (int i = 0; i < v.length; i++) {
+			System.err.print(v[i] + ", ");
+		}
+		System.err.println("]");
 	}
 	
 	public CalculationResults getShortestPath(Position source, Position target) {
@@ -274,8 +330,10 @@ public class MXMacGraphOperations {
 				(source.getDistance(s.second) + target.getDistance(t.second)) /
 				MEAN_HOP_DISTANCE;
 		Entry<Double, Queue<Integer>> dijkstra = getshortestPath(inLabel, outLabel, s.second, t.second);
+		//System.err.println(dijkstra.getRight());
 		totalDistance += dijkstra.getLeft();
-		return new CalculationResults(new Pair<Double, Queue<Integer>>(totalDistance, dijkstra.getRight()), bestLabels.first.second);
+		
+		return new CalculationResults(new Pair<Double, Queue<Integer>>(totalDistance, dijkstra.getRight()), source, s.second);
 	}
 	
 	public Position getDirectionFromLabel(int label) {
@@ -284,6 +342,10 @@ public class MXMacGraphOperations {
 	
 	public boolean checkLabelClassCompatibility(byte label, Position travelDirection) {
 		return travelDirection.equals(labelProperties[label].direction);
+	}
+	
+	public double getGeoRoutingDistance(Position source, Position target) {
+		return source.getDistance(target) * MEAN_PREAMBLE_COUNT_NORMAL / MEAN_HOP_DISTANCE;
 	}
 	
 	

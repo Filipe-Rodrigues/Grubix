@@ -59,6 +59,10 @@ public class MXMacRoutingParameters {
 	public int getBackboneType() {
 		return backboneType;
 	}
+	
+	public boolean amIBackbone() {
+		return backboneType > 0;
+	}
 
 	public void setBackboneType(int backboneType) {
 		this.backboneType = backboneType;
