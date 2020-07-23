@@ -103,6 +103,7 @@ public class SingletonTestResult {
 			tick = SimulationManager.getInstance().getCurrentTime();
 		} else {
 			tock = SimulationManager.getInstance().getCurrentTime();
+			System.out.println(tock - tick);
 			timeAccumulated += (tock - tick);
 			tick = tock = -1;
 		}

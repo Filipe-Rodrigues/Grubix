@@ -124,11 +124,11 @@ public class MXMacRandomStartPositions extends br.ufla.dcc.grubix.simulator.move
 	private Position generateFixedPosition(int nodeId) {
 		switch (testingCase) {
 		case 1:
-			return (nodeId == 1) ? (new Position(5, 5)) : (new Position(xSize - 5, ySize - 5));
+			return (nodeId == 1) ? (new Position(10, 5)) : (new Position(xSize - 5, ySize - 5));
 		case 2:
 			return (nodeId == 1) ? (new Position(xSize/2, 5)) : (new Position(xSize/2, ySize - 5));
 		case 3:
-			return (nodeId == 1) ? (new Position(xSize - 5, 5)) : (new Position(5, ySize - 5));
+			return (nodeId == 1) ? (new Position(xSize, 5)) : (new Position(5, ySize - 5));
 		case 4:
 			return (nodeId == 1) ? (new Position(5, ySize/2)) : (new Position(xSize - 5, ySize/2));
 		

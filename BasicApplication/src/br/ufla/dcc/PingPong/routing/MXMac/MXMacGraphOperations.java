@@ -27,7 +27,7 @@ public class MXMacGraphOperations {
 		
 		public LabelProperties(Position dir, double proportion) {
 			direction = dir;
-			proportion = fieldProportion;
+			fieldProportion = proportion;
 		}
 	}
 	
@@ -48,14 +48,14 @@ public class MXMacGraphOperations {
 			if ((eX - sX) == 0) {
 				iX = sX;
 				if ((eY - sY) > 0) {
-					iY = MAX_Y;
+					iY = MAX_Y();
 				} else {
 					iY = 0;
 				}
 			} else {
 				iY = sY;
 				if ((eX - sX) > 0) {
-					iX = MAX_X;
+					iX = MAX_X();
 				} else {
 					iX = 0;
 				}
@@ -139,8 +139,8 @@ public class MXMacGraphOperations {
 			} else if (args[0].matches("[0-9]+")){
 				int s = Integer.parseInt(args[0]);
 				int t = Integer.parseInt(args[1]);
-				double xCoord = Double.parseDouble(args[2]) * MAX_X;
-				double yCoord = Double.parseDouble(args[3]) * MAX_Y;
+				double xCoord = Double.parseDouble(args[2]) * MAX_X();
+				double yCoord = Double.parseDouble(args[3]) * MAX_Y();
 				Position intersection = new Position(xCoord, yCoord);
 				adjMatrix[s][t] = intersection;
 				if (!directed) adjMatrix[t][s] = intersection;
@@ -191,16 +191,25 @@ public class MXMacGraphOperations {
 	}
 
 	private char getRegionFromPosition(Position pos) {
-		int x = (int) Math.floor(pos.getXCoord() * (3d / MAX_X));
-		int y = (int) Math.floor(pos.getYCoord() * (3d / MAX_Y));
+		int x = (int) Math.floor(pos.getXCoord() * (3d / MAX_X()));
+		int y = (int) Math.floor(pos.getYCoord() * (3d / MAX_Y()));
 		x = (x < 3) ? ((x >= 0) ? (x) : 0) : (3);
 		y = (y < 3) ? ((y >= 0) ? (y) : 0) : (3);
 		return regions[x][y];
 	}
 	
+	private List<Pair<Integer, Position>> getAllEntrances(Position position) {
+		char region = getRegionFromPosition(position);
+		List<Integer> labels = regionLabels.get(region);
+		List<Pair<Integer, Position>> entrances = new ArrayList<Pair<Integer,Position>>();
+		for (int label : labels) {
+			entrances.add(new Pair<Integer, Position>(label, getEntranceVector(position, label)));
+		}
+		return entrances;
+	}
+	
 	private Pair<Integer, Position> getNearestViableLabel(Position position, Position dirVector) {
-		double pX = position.getXCoord(), pY = position.getYCoord();
-		double iX = -1, iY = -1, selectedX = -1, selectedY = -1;
+		double iX = -1d, iY = -1d, selectedX = -1d, selectedY = -1d;
 		char region = getRegionFromPosition(position);
 		//System.err.println("REGION DATA: " + position + " => " + region);
 		List<Integer> labels = regionLabels.get(region);
@@ -208,17 +217,8 @@ public class MXMacGraphOperations {
 		double nearestDistance = Double.POSITIVE_INFINITY;
 		for (int label : labels) {
 			Position dir = labelProperties[label].direction;
-			double propPos = labelProperties[label].fieldProportion;
-			double distance;
-			if (dir.getXCoord() != 0) {
-				distance = Math.abs(propPos * MAX_Y - pY);
-				iX = pX;
-				iY = propPos * MAX_Y;
-			} else {
-				distance = Math.abs(propPos * MAX_X - pX);
-				iX = propPos * MAX_X;
-				iY = pY;
-			}
+			Position entranceVector = getEntranceVector(position, label);
+			double distance = position.getDistance(entranceVector);
 			if (distance <= nearestDistance) {
 				double dirX = dir.getXCoord(), dirY = dir.getYCoord();
 				double dirVX = dirVector.getXCoord(), dirVY = dirVector.getYCoord();
@@ -237,6 +237,21 @@ public class MXMacGraphOperations {
 		return null;
 	}
 	
+	private Position getEntranceVector(Position position, int label) {
+		double pX = position.getXCoord(), pY = position.getYCoord();
+		Position dir = labelProperties[label].direction;
+		double propPos = labelProperties[label].fieldProportion;
+		double iX, iY;
+		if (dir.getXCoord() != 0) {
+			iX = pX;
+			iY = (double) propPos * MAX_Y();
+		} else {
+			iX = (double) propPos * MAX_X();
+			iY = pY;
+		}
+		return new Position(iX, iY);
+	}
+
 	private Pair<Pair<Integer, Position>, Pair<Integer, Position>> getBestLabelPair(Position source, Position target) {
 		double sX = source.getXCoord(), sY = source.getYCoord();
 		double tX = target.getXCoord(), tY = target.getYCoord();
@@ -267,6 +282,10 @@ public class MXMacGraphOperations {
 		}
 		fillPathQueue(queue, parents, parents[currentIndex]);
 		queue.add(currentIndex);
+	}
+	
+	private Entry<Double, Queue<Integer>> getshortestPath(Pair<Integer, Position> sourceData, Pair<Integer, Position> targetData) {
+		return getshortestPath(sourceData.first, targetData.first, sourceData.second, targetData.second);
 	}
 	
 	private Entry<Double, Queue<Integer>> getshortestPath(int source, int target, Position enter, Position exit) {
@@ -300,8 +319,13 @@ public class MXMacGraphOperations {
 		}
 
 		Queue<Integer> path = new LinkedList<Integer>();
-		double totalDistance = distances[target] + enterPositions[target].getDistance(exit);
-		totalDistance *= MEAN_PREAMBLE_COUNT_BACKBONE / MEAN_HOP_DISTANCE;
+		double totalDistance;
+		try { 
+			totalDistance = distances[target] + enterPositions[target].getDistance(exit);
+			totalDistance *= MEAN_PREAMBLE_COUNT_BACKBONE / MEAN_HOP_DISTANCE;
+		} catch (NullPointerException e) {
+			totalDistance = Double.POSITIVE_INFINITY;
+		}
 		fillPathQueue(path, parents, target);
 		Entry<Double, Queue<Integer>> shortestPathToTarget = new Entry<Double, Queue<Integer>>
 		(totalDistance, path);
@@ -311,6 +335,7 @@ public class MXMacGraphOperations {
 		return shortestPathToTarget;
 	}
 	
+	@SuppressWarnings("unused")
 	private void print(double[] v) {
 		System.err.print("[");
 		for (int i = 0; i < v.length; i++) {
@@ -319,7 +344,7 @@ public class MXMacGraphOperations {
 		System.err.println("]");
 	}
 	
-	public CalculationResults getShortestPath(Position source, Position target) {
+	public CalculationResults getShortestPathFaster(Position source, Position target) {
 		Pair<Pair<Integer, Position>, Pair<Integer, Position>> bestLabels = getBestLabelPair(source, target);
 		if (bestLabels == null) return null;
 		Pair<Integer, Position> s = bestLabels.first;
@@ -330,10 +355,44 @@ public class MXMacGraphOperations {
 				(source.getDistance(s.second) + target.getDistance(t.second)) /
 				MEAN_HOP_DISTANCE;
 		Entry<Double, Queue<Integer>> dijkstra = getshortestPath(inLabel, outLabel, s.second, t.second);
-		//System.err.println(dijkstra.getRight());
+		System.err.println(dijkstra.getRight());
 		totalDistance += dijkstra.getLeft();
 		
 		return new CalculationResults(new Pair<Double, Queue<Integer>>(totalDistance, dijkstra.getRight()), source, s.second);
+	}
+	
+	public CalculationResults getBestResult(List<CalculationResults> results) {
+		double minDist = Double.POSITIVE_INFINITY;
+		CalculationResults bestResult = null;
+		for (CalculationResults result : results) {
+			if (result.getDistance() < minDist) {
+				minDist = result.getDistance();
+				bestResult = result;
+			}
+		}
+		return bestResult;
+	}
+	
+	public CalculationResults getShortestPathImproved(Position source, Position target) {
+		List<Pair<Integer, Position>> sourceEntrances = getAllEntrances(source);
+		List<Pair<Integer, Position>> targetEntrances = getAllEntrances(target);
+		List<CalculationResults> results = new ArrayList<CalculationResults>();
+		for (Pair<Integer, Position> sourceIn : sourceEntrances) {
+			for (Pair<Integer, Position> targetIn : targetEntrances) {
+				Entry<Double, Queue<Integer>> dijkstra = getshortestPath(sourceIn, targetIn);
+				double totalDistance = MEAN_PREAMBLE_COUNT_NORMAL * 
+						(source.getDistance(sourceIn.second) + target.getDistance(targetIn.second)) /
+						MEAN_HOP_DISTANCE;
+				if (dijkstra.getLeft() < Double.POSITIVE_INFINITY) {
+					totalDistance += dijkstra.getLeft();
+				} else {
+					totalDistance = Double.POSITIVE_INFINITY;
+				}
+				//System.err.println("DIJKSTRA DISTANCE: " + totalDistance + " || PATH: " + dijkstra.getRight());
+				results.add(new CalculationResults(new Pair<Double, Queue<Integer>>(totalDistance, dijkstra.getRight()), source, sourceIn.second));
+			}
+		}
+		return getBestResult(results);
 	}
 	
 	public Position getDirectionFromLabel(int label) {

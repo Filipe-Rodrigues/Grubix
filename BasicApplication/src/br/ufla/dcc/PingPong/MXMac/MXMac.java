@@ -19,6 +19,8 @@ Copyright 2006 The ShoX developers as defined under http://shox.sourceforge.net
 package br.ufla.dcc.PingPong.MXMac;
 
 import static br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager.MXMAC_CONFIG;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +105,20 @@ public class MXMac extends MACLayer {
 	
 	/** Lista de vizinhos backbone, para facilitar o controle de mudança de canal */
 	private Map<NodeId, Integer> backboneNeighbors = null;
+	
+	private static final List<Integer> testNodes = new ArrayList<Integer>();
+	{
+//		testNodes.add(10);
+//		testNodes.add(11);
+//		testNodes.add(12);
+//		testNodes.add(13);
+//		testNodes.add(14);
+//		testNodes.add(15);
+//		testNodes.add(16);
+//		testNodes.add(17);
+//		testNodes.add(970);
+//		testNodes.add(196);
+	}
 
 	/**
 	 * Função padrão do Grubix para fazer a configuração do objeto
@@ -148,8 +164,11 @@ public class MXMac extends MACLayer {
 		loadBackboneNeighborhood();
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();
-
-		// testBackbone();
+		if (testNodes.contains(node.getId().asInt()))
+		{
+			System.err.println("Node #" + node.getId().asInt() + ": " + backboneNeighbors);
+			System.err.println("Node #" + node.getId() + " channel: " + xConf.getBackboneType());
+		}
 	}
 
 	private boolean switchToBackbone(int bbType) {
@@ -175,7 +194,9 @@ public class MXMac extends MACLayer {
 	}
 	
 	private int getNodeBackboneType(NodeId id) {
-		if (node.getId().equals(id)) {
+		if (id.equals(savestate.getNextBackboneNode(node.getId()))) {
+			return xConf.getBackboneType();
+		} else if (node.getId().equals(id)) {
 			return xConf.getBackboneType();
 		} else {
 			if (backboneNeighbors != null) {
@@ -196,6 +217,10 @@ public class MXMac extends MACLayer {
 		}
 		for (NodeId neigh : bbNeigh2) {
 			backboneNeighbors.put(neigh, MXMacConstants.COUNTER_CLOCKWISE_BB_CHANNEL);
+		}
+		
+		if (node.getId().asInt() == 12) {
+			//System.err.println("#12 BB neighs: " + backboneNeighbors);
 		}
 	}
 	

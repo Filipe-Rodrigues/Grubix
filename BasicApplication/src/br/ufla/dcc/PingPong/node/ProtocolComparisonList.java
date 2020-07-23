@@ -16,13 +16,14 @@ public class ProtocolComparisonList extends ApplicationLayer {
 	private int laps;
 
 	private static final int INITIAL_NODE = 1;
-	private static final int FINAL_NODE = 9;
+	private static final int FINAL_NODE = 44;
 
 	protected void processEvent(StartSimulation start) {
 		if (node.getId().asInt() == INITIAL_NODE) {
 			SimulationManager.logNodeState(node.getId(), "Destino", "int", String.valueOf(10));
 			SimulationManager.logNodeState(NodeId.get(INITIAL_NODE + 1), "Destino", "int", String.valueOf(10));
 			SingletonTestResult.getInstance().setStartingTime(SimulationManager.getInstance().getCurrentTime());
+			SingletonTestResult.getInstance().mark();
 			ChainTestPacket pack = new ChainTestPacket(sender, 1);
 			sendPacket(pack);
 		}
@@ -40,6 +41,7 @@ public class ProtocolComparisonList extends ApplicationLayer {
 	@Override
 	public void lowerSAP(Packet packet) throws LayerException {
 		if (packet instanceof ChainTestPacket) {
+			SingletonTestResult.getInstance().mark();
 			ChainTestPacket chainPack = (ChainTestPacket) packet;
 			ChainTestPacket pack;
 			int lap = chainPack.getLapNumber();
@@ -53,6 +55,7 @@ public class ProtocolComparisonList extends ApplicationLayer {
 				pack = new ChainTestPacket(sender, lap);
 			}
 			SimulationManager.logNodeState(pack.getReceiver(), "Destino", "int", String.valueOf(10));
+			SingletonTestResult.getInstance().mark();
 			sendPacket(pack);
 		}
 	}

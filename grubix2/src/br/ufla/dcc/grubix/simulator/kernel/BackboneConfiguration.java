@@ -18,7 +18,6 @@ public class BackboneConfiguration implements Serializable {
 	public List<NodeId> backboneNeighborsUSAMac;
 	public List<NodeId> backboneNeighborsMXMacType1;
 	public List<NodeId> backboneNeighborsMXMacType2;
-	public byte label;
 	public double cycleStart;
 	
 	public BackboneConfiguration() {
@@ -27,7 +26,6 @@ public class BackboneConfiguration implements Serializable {
 		backboneNeighborsUSAMac = new ArrayList<NodeId>();
 		backboneNeighborsMXMacType1 = new ArrayList<NodeId>();
 		backboneNeighborsMXMacType2 = new ArrayList<NodeId>();
-		label = -1;
 		cycleStart = -1;
 	}
 	

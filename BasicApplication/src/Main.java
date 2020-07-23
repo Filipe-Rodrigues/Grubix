@@ -5,7 +5,6 @@ public class Main {
 	public static void main(String[] args) {
 		//JOptionPane.showMessageDialog(null, "STARTING");
 		try {
-			long startTime = System.currentTimeMillis();
 			//String path = "application_exmac_gerador.xml";
 			//String path = "application_exmac_teste.xml";
 			//String path = "application_exmac_teste_georouting.xml";
@@ -24,9 +23,6 @@ public class Main {
 			//Simulator.main(new String[]{"TESTE_EXMAC.xml", "false", "true", "N/A"});
 			//Simulator.main(new String[]{"TESTE_USAMAC.xml", "false", "true", "USAMAC"});
 			Simulator.main(new String[]{"TESTE_MXMAC.xml", "false", "true", "MXMAC"});
-			
-			long endTime   = System.currentTimeMillis();
-			long totalTime = endTime - startTime;
 			
 			//System.out.println("\nTempo de execução do processador: " + (totalTime/1000.0) + "s");
 		} catch (Exception e) {

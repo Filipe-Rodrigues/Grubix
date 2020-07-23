@@ -14,6 +14,7 @@ import br.ufla.dcc.grubix.simulator.Position;
 import br.ufla.dcc.grubix.simulator.kernel.BackboneConfigurationManager;
 import br.ufla.dcc.grubix.simulator.kernel.SimulationManager;
 import br.ufla.dcc.grubix.simulator.node.Node;
+import br.ufla.dcc.grubix.simulator.util.Pair;
 
 public class MXMacRoutingParameters {
 	
@@ -124,6 +125,30 @@ public class MXMacRoutingParameters {
 
 	public boolean isNeighborBackbone(Node neighbor) {
 		return bbNeighborsType1.contains(neighbor) || bbNeighborsType2.contains(neighbor);
+	}
+	
+	public NodeId getBackboneNeighbor(Pair<Integer, Position> type, Position target) {
+		int channel = type.first;
+		Position dir = type.second;
+		if (channel == 1) {
+			return searchNearestBBNeighbor(bbNeighborsType1, target, dir);
+		} else if (channel == 2) {
+			return searchNearestBBNeighbor(bbNeighborsType2, target, dir);
+		}
+		return null;
+	}
+	
+	private NodeId searchNearestBBNeighbor(List<Node> nodes, Position target, Position dir) {
+		NodeId nearestNode = null;
+		double min = Double.POSITIVE_INFINITY;
+		for (Node node : nodes) {
+			double dist = node.getPosition().getDistance(target);
+			if (savestate.getBackboneDirection(node.getId()).equals(dir) && dist < min) {
+				min = dist;
+				nearestNode = node.getId();
+			}
+		}
+		return nearestNode;
 	}
 
 }

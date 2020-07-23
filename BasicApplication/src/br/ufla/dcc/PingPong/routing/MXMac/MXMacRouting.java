@@ -52,12 +52,12 @@ public class MXMacRouting extends NetworkLayer {
 			/* Se o destino da mensagem é o nó, então manda para a camada de aplicação, senão continua
 			 * o roteamento (envia para o nó vizinho mais próximo do destino) */
 			if (enclosed.getReceiver().equals(getId())) {
-				sendPacket(enclosed);
+				finalizeCommunication(enclosed, geoRoutingPacket.getHopCounter());
 			} else {
 				// Ferramentas de depuração -------------------------
 				debug.print("[Roteamento] Mensagem não é para mim, será enviada para camada abaixo (LLC)", sender);
 				// --------------------------------------------------
-				routePacketGeoRouting(enclosed);
+				routePacketGeoRouting(enclosed, geoRoutingPacket.getHopCounter());
 			}	
 		} else if (packet instanceof MXMacRoutingControlPacket) {
 			MXMacRoutingControlPacket controlPack = (MXMacRoutingControlPacket) packet;
@@ -67,14 +67,29 @@ public class MXMacRouting extends NetworkLayer {
 				turnIntoBackbone(controlPack);
 			}
 		} else if (packet instanceof MXMacRoutingPacket) {
-			
+			MXMacRoutingPacket mxpack = (MXMacRoutingPacket) packet;
+			Packet enclosed = mxpack.getEnclosedPacket();
+			if (enclosed.getReceiver().equals(getId())) {
+				finalizeCommunication(enclosed, mxpack.getHopCounter());
+			} else {
+				routePacketInBackbone(enclosed, mxpack.getBackbonePath(), mxpack.getVirtualTarget(), mxpack.getHopCounter());
+			}
 		}
 	}
 
 	
+	private void finalizeCommunication(Packet enclosed, int hopCount) {
+		System.out.print(hopCount + "\t");
+		sendPacket(enclosed);
+	}
+
+
 	@Override
 	public void upperSAP(Packet packet) throws LayerException {		
 		debug.write(debug.strPkt(packet), sender);
+		Position myPos = node.getPosition();
+		Position destPos = SimulationManager.getInstance().queryNodeById(packet.getReceiver()).getPosition();
+		System.out.print(myPos.getDistance(destPos) + "\t");
 		chooseRoutingProcedure(packet);
 	}
 
@@ -122,7 +137,7 @@ public class MXMacRouting extends NetworkLayer {
 		return minDistanceNodeId;
 	}
 	
-	private void routePacketGeoRouting (Packet packet) {
+	private void routePacketGeoRouting (Packet packet, int hopCount) {
 		Position destinationPosition = SimulationManager.getInstance().
 				queryNodeById(packet.getReceiver()).getPosition();
 
@@ -134,6 +149,7 @@ public class MXMacRouting extends NetworkLayer {
 			System.exit(1);
 		}
 		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);
+		newPacket.setHopCount(hopCount + 1);
 		
 		sendPacket(newPacket);		
 	}
@@ -214,25 +230,77 @@ public class MXMacRouting extends NetworkLayer {
 		Position thisNode = node.getPosition();
 		Position destination = SimulationManager.getInstance().
 				queryNodeById(packet.getReceiver()).getPosition();
-		CalculationResults results = graphOps.getShortestPath(thisNode, destination);
+		CalculationResults results = graphOps.getShortestPathImproved(thisNode, destination);
 		double normalRouteWeight = graphOps.getGeoRoutingDistance(thisNode, destination);
 		double backboneRouteWeight = results.getDistance();
 		if (normalRouteWeight <= backboneRouteWeight) {
-			routePacketGeoRouting(packet);
+			routePacketGeoRouting(packet, -1);
 		} else {
-			routePacketInBackbone(packet, results.getBackboneRoute());
+			routePacketInBackbone(packet, results.getBackboneRoute(), results.getVirtualTarget(), -1);
 		}
 	}
 	
-	private void routePacketInBackbone(Packet packet, Queue<Pair<Integer, Position>> backboneSegments) {
+	private void routePacketInBackbone(Packet packet, Queue<Pair<Integer, Position>> backboneSegments, Position virtualTarget, int hopCount) {
 		if (!backboneSegments.isEmpty()) {
 			Pair<Integer, Position> segment = backboneSegments.peek();
 			boolean sent = false;
+			NodeId bbNeigh = bbSettings.getBackboneNeighbor(segment, SimulationManager.getInstance().queryNodeById(packet.getReceiver()).getPosition());
+			if (bbNeigh != null) {
+				backboneSegments.poll();
+				sendMXMacRoutingPacket(packet, bbNeigh, backboneSegments, null, hopCount);
+				sent = true;
+			}
+			if (!sent) {
+				if (!bbSettings.amIBackbone()) {
+					NodeId closestNeighbor = null;
+					double minDistance = node.getPosition().getDistance(virtualTarget);
+					//System.err.println("Distance: " + minDistance);
+					for (Node neighbor : bbSettings.getNeighbors()) {
+						Position neighPos = neighbor.getPosition();
+						double distance = neighPos.getDistance(virtualTarget);
+						//System.err.println(neighbor.getId() + " dist: " + distance);
+						if (distance < minDistance) {
+							minDistance = distance;
+							closestNeighbor = neighbor.getId();
+						}
+					}
+					if (closestNeighbor != null) {
+						sendMXMacRoutingPacket(packet, closestNeighbor, backboneSegments, virtualTarget, hopCount);
+					} else {
+						System.err.println(id + " >>>> BURACO ENCONTRADO, SAINDO DA APLICAÇÃO!!!");
+						//System.exit(1);
+					}
+				} else {
+					NodeId nextBBNode = bbSettings.getNextBBnode().getId();
+					if (nextBBNode.equals(node.getId())) {
+						System.err.println("MESSAGE LEAKAGE, SOLVE THIS PROBLEM!!!!");
+					} else {
+						sendMXMacRoutingPacket(packet, nextBBNode, backboneSegments, null, hopCount);
+					}
+				}
+			}
+		} else {
 			if (bbSettings.amIBackbone()) {
-				NodeId nextBBnode = bbSettings.getNextBBnode().getId();
-				
+				Position source = node.getPosition();
+				Position nextBBPosition = bbSettings.getNextBBnode().getPosition();
+				Position destination = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
+						.getPosition();
+				if (source.getDistance(destination) <= nextBBPosition.getDistance(destination)) {
+					routePacketGeoRouting(packet, hopCount);
+				} else {
+					NodeId nextBBNode = bbSettings.getNextBBnode().getId();
+					sendMXMacRoutingPacket(packet, nextBBNode, backboneSegments, null, hopCount);
+				}
+			} else {
+				routePacketGeoRouting(packet, hopCount);
 			}
 		}
+	}
+	
+	private void sendMXMacRoutingPacket(Packet packet, NodeId receiver, Queue<Pair<Integer, Position>> path, Position virtualTarget, int hopCount) {
+		MXMacRoutingPacket mxpack = new MXMacRoutingPacket(sender, receiver, packet, path, virtualTarget);
+		mxpack.setHopCount(hopCount + 1);
+		sendPacket(mxpack);
 	}
 	
 }

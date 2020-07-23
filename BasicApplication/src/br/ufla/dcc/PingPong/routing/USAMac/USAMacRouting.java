@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Queue;
 import br.ufla.dcc.PingPong.ToolsDebug;
 import br.ufla.dcc.PingPong.ToolsMiscellaneous;
+import br.ufla.dcc.PingPong.BackboneXMac.Stats.Simulation;
 import br.ufla.dcc.PingPong.USAMac.EventFinishedCSEnd;
 import br.ufla.dcc.PingPong.movement.FromConfigStartPositions;
 import br.ufla.dcc.PingPong.routing.GeoRoutingPacket;
@@ -268,9 +269,9 @@ public class USAMacRouting extends NetworkLayer {
 				this.travelDirection = travelDirection;
 			} else {
 				NodeId myId = node.getId();
-				label = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneNodeLabel(myId);
 				backboneNeighbors = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).loadBackboneNeighborsUSAMac(myId);
 				this.travelDirection = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneDirection(myId);
+				label = getCorrespondingLabel(node.getPosition(), this.travelDirection);
 				//label = getCorrespondingLabel(node.getPosition(), travelDirection);
 			}
 		}
@@ -291,7 +292,6 @@ public class USAMacRouting extends NetworkLayer {
 			nextBackboneNode = (canIGrowMore()) ? (selectNextNeighbor()) : (node);
 			//System.err.println("CHOOSEN ID for #" + node.getId() + ": " + nextBackboneNode.getId());
 			label = getCorrespondingLabel(node.getPosition(), travelDirection);
-			BackboneConfigurationManager.getInstance(USAMAC_CONFIG).setBackboneNodeLabel(node.getId(), label);
 			announceConversion(travelDirection);
 		}
 		
@@ -347,17 +347,21 @@ public class USAMacRouting extends NetworkLayer {
 				byte backboneSegment = intermediatePaths.peek();
 				boolean sentMessage = false;
 				if (amIBackbone()) {
-					NodeId nextBBNode = nextBackboneNode.getId();
-					byte neighLabel = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneNodeLabel(nextBBNode);
+					NodeId nextBBNodeId = nextBackboneNode.getId();
+					Position nextBBNodePos = SimulationManager.getInstance().queryNodeById(nextBBNodeId).getPosition();
+					Position nextBBNodeDir = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneDirection(nextBBNodeId);
+					byte neighLabel = getCorrespondingLabel(nextBBNodePos, nextBBNodeDir);
 					if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 						intermediatePaths.poll();
-						sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
+						sendEXMacRoutingPacket(packet, nextBBNodeId, intermediatePaths);
 						sentMessage = true;
 					}
 				}
 				if (!sentMessage && !backboneNeighbors.isEmpty()) {
 					for (NodeId neighbor : backboneNeighbors) {
-						byte neighLabel = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneNodeLabel(neighbor);
+						Position neighPos = SimulationManager.getInstance().queryNodeById(neighbor).getPosition();
+						Position neighDir = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getBackboneDirection(neighbor);
+						byte neighLabel = getCorrespondingLabel(neighPos, neighDir);
 						if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 							//System.err.println("FOUND BACKBONE BRANCH: ");
 							intermediatePaths.poll();
@@ -525,6 +529,7 @@ public class USAMacRouting extends NetworkLayer {
 		}
 		
 		private byte getCorrespondingLabel(Position nodePosition, Position travelDirection) {
+			if (travelDirection == null) return -1;
 			double nodeX = nodePosition.getXCoord();
 			double nodeY = nodePosition.getYCoord();
 			if (travelDirection.equals(RIGHT)) {

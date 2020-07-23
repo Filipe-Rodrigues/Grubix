@@ -1,5 +1,8 @@
 package br.ufla.dcc.PingPong.physicalMX;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import br.ufla.dcc.grubix.simulator.LayerException;
 import br.ufla.dcc.grubix.simulator.NodeId;
 import br.ufla.dcc.grubix.simulator.event.CrossLayerEvent;
@@ -91,6 +94,19 @@ public class PhysicalMX extends PhysicalLayer {
 	/** Tamanho adicional do pacote da PHY, será somado ao tamanho do pacote vindo da MAC. 
 	 *  Por enquanto será deixado em zero */
 	private int headerPlusFooterLength = 0;
+	
+	private static final List<Integer> testNodes = new ArrayList<Integer>();
+	{
+//		testNodes.add(10);
+//		testNodes.add(11);
+//		testNodes.add(12);
+//		testNodes.add(13);
+//		testNodes.add(14);
+//		testNodes.add(15);
+//		testNodes.add(16);
+//		testNodes.add(17);
+		//testNodes.add(970);
+	}
 	
 	public PhysicalMX() {
 		super();
@@ -187,13 +203,28 @@ public class PhysicalMX extends PhysicalLayer {
 		}
 
 		NodeId senderId = packet.getSender().getId();
+		NodeId receiverID = packet.getReceiver();
 		
 		// Se receber uma mensagem de um canal diferente do sintonizado, ignora
 		
 		if (packet instanceof PhysicalMXPacket) {
-			if (((PhysicalMXPacket) packet).getPacketChannel() != phyRadioState.getCurrentChannel()
-					&& !senderId.equals(NodeId.ALLNODES))
+			PhysicalMXPacket mxPhyPack = (PhysicalMXPacket) packet;
+			if (testNodes.contains(node.getId().asInt())) {
+				System.err.print("Node #" + node.getId() + " channel: " + phyRadioState.getCurrentChannel() + " || ");
+				System.err.print("Packet receiver/channel: " + receiverID + "/" + mxPhyPack.getPacketChannel() + " || ");
+				System.err.print("STATUS: ");
+			}
+			
+			if (!receiverID.equals(NodeId.ALLNODES) && mxPhyPack.getPacketChannel() != phyRadioState.getCurrentChannel()) {
+				if (testNodes.contains(node.getId().asInt())) {
+					System.err.println("REJECTED");
+				}
 				return;
+			} else {
+				if (testNodes.contains(node.getId().asInt())) {
+					System.err.println("ACCEPTED");
+				}
+			}
 		}
 		
 		// Se receber uma mensagem enviada por ele mesmo não faz nada

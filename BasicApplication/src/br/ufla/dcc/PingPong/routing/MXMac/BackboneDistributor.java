@@ -58,8 +58,8 @@ public class BackboneDistributor {
 		double x, y;
 		double dirX = direction.getXCoord(), dirY = direction.getYCoord();
 		double sX = source.getXCoord(), sY = source.getYCoord();
-		x = (dirX == 0) ? (sX) : (MAX_X * dirX);
-		y = (dirY == 0) ? (sY) : (MAX_Y * dirY);
+		x = (dirX == 0) ? (sX) : (MAX_X() * dirX);
+		y = (dirY == 0) ? (sY) : (MAX_Y() * dirY);
 		x = (x < 0) ? (0) : (x);
 		y = (y < 0) ? (0) : (y);
 		return new Position(x, y);
@@ -68,10 +68,10 @@ public class BackboneDistributor {
 	private boolean canExpand(Node node) {
 		double nodeX = node.getPosition().getXCoord();
 		double nodeY = node.getPosition().getYCoord();
-		double lowerXBound = MAX_X * (1 - backboneBoundaryRatio);
-		double upperXBound = MAX_X * backboneBoundaryRatio;
-		double lowerYBound = MAX_Y * (1 - backboneBoundaryRatio);
-		double upperYBound = MAX_Y * backboneBoundaryRatio;
+		double lowerXBound = MAX_X() * (1 - backboneBoundaryRatio);
+		double upperXBound = MAX_X() * backboneBoundaryRatio;
+		double lowerYBound = MAX_Y() * (1 - backboneBoundaryRatio);
+		double upperYBound = MAX_Y() * backboneBoundaryRatio;
 		return nodeX > lowerXBound && nodeX < upperXBound && nodeY > lowerYBound && nodeY < upperYBound;
 	}
 	

@@ -17,7 +17,7 @@ public class ProtocolComparisonSink extends ApplicationLayer {
 	private int laps;
 
 	private static final int COMM_NODES = 1;
-	private static final NodeId SINK = NodeId.get(5);
+	private static final int SINK = 5;
 
 	protected void processEvent(StartSimulation start) {
 		if (node.getId().asInt() <= COMM_NODES) {
@@ -51,7 +51,7 @@ public class ProtocolComparisonSink extends ApplicationLayer {
 	public void processWakeUpCall(WakeUpCall wuc) {
 		if (wuc instanceof PingPongWakeUpCall) {
 			SingletonTestResult.getInstance().mark();
-			AppPacket pack = new AppPacket(sender, NodeId.get(5));
+			AppPacket pack = new AppPacket(sender, NodeId.get(SINK));
 			sendPacket(pack);
 		}
 	}

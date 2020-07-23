@@ -11,13 +11,15 @@ import br.ufla.dcc.grubix.simulator.util.Pair;
 
 public class MXMacRoutingPacket extends NetworkPacket {
 
-	Queue<Pair<Integer, Position>> backbonePath;
-	Position vTarget;
+	private Queue<Pair<Integer, Position>> backbonePath;
+	private Position vTarget;
+	private int hopCounter;
 	
 	public MXMacRoutingPacket(Address sender, NodeId receiver, Packet packet, Queue<Pair<Integer, Position>> path, Position virtualTarget) {
 		super(sender, receiver, packet);
 		backbonePath = path;
 		vTarget = virtualTarget;
+		hopCounter = 0;
 	}
 
 	public Queue<Pair<Integer, Position>> getBackbonePath() {
@@ -27,4 +29,13 @@ public class MXMacRoutingPacket extends NetworkPacket {
 	public Position getVirtualTarget() {
 		return vTarget;
 	}
+	
+	public int getHopCounter () {
+		return hopCounter;
+	}
+	
+	public void setHopCount(int hops) {
+		hopCounter = hops;
+	}
+	
 }
