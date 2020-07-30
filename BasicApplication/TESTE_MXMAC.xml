@@ -95,5 +95,5 @@
     </generated>
 </positions>
 <!--Tempo total de simulação = stepspersecond * seconds-->
-<simulationtime stepspersecond="10000" base="seconds">18</simulationtime>
+<simulationtime stepspersecond="10000" base="seconds">15</simulationtime>
 </configuration>

@@ -47,7 +47,7 @@ public class GeoRouting extends NetworkLayer {
 		sendEventSelf(sdwuc);
 	}
 	
-	private void routePacket (Packet packet) {
+	private void routePacket (Packet packet, int hopCount) {
 		if (this.neighbors == null) {
 			this.neighbors = node.getNeighbors();
 		}
@@ -63,8 +63,9 @@ public class GeoRouting extends NetworkLayer {
 			System.exit(1);
 		}
 		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);
-		
-		sendDelayed(newPacket, 50);		
+		newPacket.setHopCount(hopCount + 1);
+		sendDelayed(newPacket, 50);
+		//sendPacket(newPacket);
 	}
 	
 	
@@ -77,12 +78,13 @@ public class GeoRouting extends NetworkLayer {
 			/* Se o destino da mensagem é o nó, então manda para a camada de aplicação, senão continua
 			 * o roteamento (envia para o nó vizinho mais próximo do destino) */
 			if (enclosed.getReceiver().equals(getId())) {
+				System.out.print(geoRoutingPacket.getHopCounter() + "\t");
 				sendPacket(enclosed);
 			} else {
 				// Ferramentas de depuração -------------------------
 				debug.print("[Roteamento] Mensagem não é para mim, será enviada para camada abaixo (LLC)", sender);
 				// --------------------------------------------------
-				routePacket(enclosed);
+				routePacket(enclosed, geoRoutingPacket.getHopCounter());
 			}	
 		}
 	}
@@ -91,7 +93,10 @@ public class GeoRouting extends NetworkLayer {
 	@Override
 	public void upperSAP(Packet packet) throws LayerException {		
 		debug.write(debug.strPkt(packet), sender);
-		routePacket(packet);
+		Position myPos = node.getPosition();
+		Position destPos = SimulationManager.getInstance().queryNodeById(packet.getReceiver()).getPosition();
+		System.out.print(myPos.getDistance(destPos) + "\t");
+		routePacket(packet, -1);
 	}
 
 	

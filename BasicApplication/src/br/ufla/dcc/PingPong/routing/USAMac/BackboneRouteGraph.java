@@ -137,7 +137,12 @@ public class BackboneRouteGraph {
 			}
 		}
 		Queue<Byte> path = new LinkedList<Byte>();
-		double totalDistance = distances[target] + enterPositions[target].getDistance(exit);
+		double totalDistance;
+		try {
+			totalDistance = distances[target] + enterPositions[target].getDistance(exit);
+		} catch (NullPointerException e) {
+			totalDistance = Double.POSITIVE_INFINITY;
+		}
 		fillPathQueue(path, parents, target);
 		Entry<Double, Queue<Byte>> shortestPathToTarget = new Entry<Double, Queue<Byte>>
 		(totalDistance, path);

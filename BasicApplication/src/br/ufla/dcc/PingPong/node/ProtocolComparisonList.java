@@ -16,7 +16,7 @@ public class ProtocolComparisonList extends ApplicationLayer {
 	private int laps;
 
 	private static final int INITIAL_NODE = 1;
-	private static final int FINAL_NODE = 44;
+	private static final int FINAL_NODE = 2;
 
 	protected void processEvent(StartSimulation start) {
 		if (node.getId().asInt() == INITIAL_NODE) {

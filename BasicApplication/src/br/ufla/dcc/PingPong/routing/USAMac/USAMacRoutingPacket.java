@@ -10,6 +10,7 @@ import br.ufla.dcc.grubix.simulator.event.Packet;
 public class USAMacRoutingPacket extends NetworkPacket {
 
 	private Queue<Byte> backboneSegmentPath;
+	private int hopCounter;
 	
 	public USAMacRoutingPacket(Address sender, NodeId receiver, Packet packet, Queue<Byte> backbonePath) {
 		super(sender, receiver, packet);
@@ -18,6 +19,14 @@ public class USAMacRoutingPacket extends NetworkPacket {
 
 	public Queue<Byte> getBackboneSegmentPath() {
 		return backboneSegmentPath;
+	}
+	
+	public int getHopCount() {
+		return hopCounter;
+	}
+	
+	public void setHopCount(int hops) {
+		hopCounter = hops;
 	}
 
 }

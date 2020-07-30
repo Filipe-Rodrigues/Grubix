@@ -45,14 +45,14 @@ public class USAMacRouting extends NetworkLayer {
 	private List<NodeId> backboneNeighbors = null;
 	
 	/** Fila de pacotes a serem roteados */
-	private Queue<Pair<Queue<Byte>, Packet>> packetQueue = null;
+	private Queue<Pair<Queue<Byte>, Pair<Packet, Integer>>> packetQueue = null;
 
 	/** Objeto de invocação do gerador de backbones */
 	private EXMacBackboneGenerator generator;
 
 	public USAMacRouting() {
 		backboneNeighbors = new ArrayList<>();
-		packetQueue = new LinkedList<Pair<Queue<Byte>, Packet>>();
+		packetQueue = new LinkedList<Pair<Queue<Byte>, Pair<Packet, Integer>>>();
 		generator = null;
 	}
 
@@ -74,7 +74,7 @@ public class USAMacRouting extends NetworkLayer {
 		return minDistanceNodeId;
 	}
 
-	private void routePacketDirectly(Packet packet) {
+	private void routePacketDirectly(Packet packet, int hopCount) {
 		ensureNeighborhoodInitialization();
 
 		Position destinationPosition = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
@@ -86,6 +86,8 @@ public class USAMacRouting extends NetworkLayer {
 			System.exit(1);
 		}
 		GeoRoutingPacket newPacket = new GeoRoutingPacket(sender, closestId, packet);
+		
+		newPacket.setHopCount(hopCount + 1);
 
 		sendPacket(newPacket);
 	}
@@ -126,12 +128,14 @@ public class USAMacRouting extends NetworkLayer {
 			 * senão continua o roteamento (envia para o nó vizinho mais próximo do destino)
 			 */
 			if (enclosed.getReceiver().equals(getId())) {
+				System.out.print(geoRoutingPacket.getHopCounter() + "\t");
 				sendPacket(enclosed);
 			} else {
 				// Ferramentas de depuração -------------------------
 				debug.print("[Roteamento] Mensagem não é para mim, será enviada para camada abaixo (LLC)", sender);
 				// --------------------------------------------------
-				packetQueue.add(new Pair<Queue<Byte>, Packet>(null, enclosed));
+				Pair<Packet, Integer> packPair = new Pair<Packet, Integer>(enclosed, geoRoutingPacket.getHopCounter());
+				packetQueue.add(new Pair<Queue<Byte>, Pair<Packet, Integer>>(null, packPair));
 			}
 		} else if (packet instanceof USAMacRoutingControlPacket) {
 			USAMacRoutingControlPacket controlPacket = (USAMacRoutingControlPacket) packet;
@@ -150,12 +154,14 @@ public class USAMacRouting extends NetworkLayer {
 				}
 			}
 		} else if (packet instanceof USAMacRoutingPacket) {
-			USAMacRoutingPacket exmacPacket = (USAMacRoutingPacket) packet;
-			Packet enclosed = exmacPacket.getEnclosedPacket();
+			USAMacRoutingPacket usamacPacket = (USAMacRoutingPacket) packet;
+			Packet enclosed = usamacPacket.getEnclosedPacket();
 			if (enclosed.getReceiver().equals(getId())) {
+				System.out.print(usamacPacket.getHopCount() + "\t");
 				sendPacket(enclosed);
 			} else {
-				packetQueue.add(new Pair<Queue<Byte>, Packet>(exmacPacket.getBackboneSegmentPath(), enclosed));
+				Pair<Packet, Integer> packPair = new Pair<Packet, Integer>(enclosed, usamacPacket.getHopCount());
+				packetQueue.add(new Pair<Queue<Byte>, Pair<Packet, Integer>>(usamacPacket.getBackboneSegmentPath(), packPair));
 			}
 		}
 	}
@@ -163,6 +169,9 @@ public class USAMacRouting extends NetworkLayer {
 	@Override
 	public void upperSAP(Packet packet) throws LayerException {
 		debug.write(debug.strPkt(packet), sender);
+		Position myPos = node.getPosition();
+		Position destPos = SimulationManager.getInstance().queryNodeById(packet.getReceiver()).getPosition();
+		System.out.print(myPos.getDistance(destPos) + "\t");
 		generator.chooseRoutingMode(packet);
 	}
 
@@ -196,11 +205,11 @@ public class USAMacRouting extends NetworkLayer {
 		if (wuc instanceof CrossLayerEvent) {
 			if (wuc instanceof EventFinishedCSEnd) {
 				if (!packetQueue.isEmpty()) {
-					Pair<Queue<Byte>, Packet> nextPacket = packetQueue.poll();
+					Pair<Queue<Byte>, Pair<Packet, Integer>> nextPacket = packetQueue.poll();
 					if (nextPacket.getLeft() == null) {
-						routePacketDirectly(nextPacket.getRight());
+						routePacketDirectly(nextPacket.getRight().getLeft(), nextPacket.getRight().getRight());
 					} else {
-						generator.routePacketUsingBackbone(nextPacket.getRight(), nextPacket.getLeft());
+						generator.routePacketUsingBackbone(nextPacket.getRight().getLeft(), nextPacket.getLeft(), nextPacket.getRight().getRight());
 					}
 				}
 			}
@@ -242,7 +251,7 @@ public class USAMacRouting extends NetworkLayer {
 		
 		abstract void chooseRoutingMode(Packet packet);
 		
-		abstract void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths);
+		abstract void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths, int hopCount);
 	}
 
 	private class HeuristicA extends EXMacBackboneGenerator {
@@ -331,16 +340,16 @@ public class USAMacRouting extends NetworkLayer {
 			//System.err.print("BB DIST: " + backbonedDist + " ///// ");
 			//System.err.println("DIR DIST: " + directDist);
 			if (directDist <= backbonedDist) {
-				routePacketDirectly(packet);
+				routePacketDirectly(packet, -1);
 				//System.err.println("Using DIRECT........");
 			} else {
-				routePacketUsingBackbone(packet, shortestPath.getRight());
+				routePacketUsingBackbone(packet, shortestPath.getRight(), -1);
 				//System.err.println("Using BACKBONE........");
 			}
 		}
 
 		@Override
-		public void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths) {
+		public void routePacketUsingBackbone(Packet packet, Queue<Byte> intermediatePaths, int hopCount) {
 			ensureNextBackboneNodeRegistration();
 			ensureNeighborhoodInitialization();
 			if (!intermediatePaths.isEmpty()) {
@@ -353,7 +362,7 @@ public class USAMacRouting extends NetworkLayer {
 					byte neighLabel = getCorrespondingLabel(nextBBNodePos, nextBBNodeDir);
 					if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 						intermediatePaths.poll();
-						sendEXMacRoutingPacket(packet, nextBBNodeId, intermediatePaths);
+						sendEXMacRoutingPacket(packet, nextBBNodeId, intermediatePaths, hopCount);
 						sentMessage = true;
 					}
 				}
@@ -365,7 +374,7 @@ public class USAMacRouting extends NetworkLayer {
 						if (checkLabelClassCompatibility(neighLabel, getDirectionFromLabel(backboneSegment))) {
 							//System.err.println("FOUND BACKBONE BRANCH: ");
 							intermediatePaths.poll();
-							sendEXMacRoutingPacket(packet, neighbor, intermediatePaths);
+							sendEXMacRoutingPacket(packet, neighbor, intermediatePaths, hopCount);
 							sentMessage = true;
 							break;
 						}
@@ -386,7 +395,7 @@ public class USAMacRouting extends NetworkLayer {
 							}
 						}
 						if (closestNeighbor != null) {
-							sendEXMacRoutingPacket(packet, closestNeighbor, intermediatePaths);
+							sendEXMacRoutingPacket(packet, closestNeighbor, intermediatePaths, hopCount);
 						} else {
 							System.err.println(id + " >>>> BURACO ENCONTRADO, SAINDO DA APLICAÇÃO!!!");
 							System.exit(1);
@@ -396,7 +405,7 @@ public class USAMacRouting extends NetworkLayer {
 						if (nextBBNode.equals(node.getId())) {
 							System.err.println("MESSAGE LEAKAGE, SOLVE THIS PROBLEM!!!!");
 						} else {
-							sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
+							sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths, hopCount);
 						}
 					}
 				}
@@ -407,19 +416,20 @@ public class USAMacRouting extends NetworkLayer {
 					Position destination = SimulationManager.getInstance().queryNodeById(packet.getReceiver())
 							.getPosition();
 					if (source.getDistance(destination) <= nextBBPosition.getDistance(destination)) {
-						routePacketDirectly(packet);
+						routePacketDirectly(packet, hopCount);
 					} else {
 						NodeId nextBBNode = nextBackboneNode.getId();
-						sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths);
+						sendEXMacRoutingPacket(packet, nextBBNode, intermediatePaths, hopCount);
 					}
 				} else {
-					routePacketDirectly(packet);
+					routePacketDirectly(packet, hopCount);
 				}
 			}
 		}
 		
-		private void sendEXMacRoutingPacket(Packet packet, NodeId destination, Queue<Byte> intermediatePath) {
+		private void sendEXMacRoutingPacket(Packet packet, NodeId destination, Queue<Byte> intermediatePath, int hopCount) {
 			USAMacRoutingPacket exmacPacket = new USAMacRoutingPacket(sender, destination, packet, intermediatePath);
+			exmacPacket.setHopCount(hopCount + 1);
 			sendPacket(exmacPacket);
 		}
 		

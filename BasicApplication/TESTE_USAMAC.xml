@@ -61,7 +61,7 @@
     <logClass>br.ufla.dcc.grubix.debug.compactlogging.XMLFileLogger</logClass>
     <filter>
         <description>Sample filter</description>
-        <logdata>true</logdata>
+        <logdata>false</logdata>
         <acceptedtypes>
             <class priority="off">br.ufla.dcc.grubix.simulator.event.user.OptSrcRoutingPacket</class>
             <class priority="info">br.ufla.dcc.grubix.simulator.event.PhysicalPacket</class>
@@ -94,5 +94,5 @@
     </generated>
 </positions>
 <!--Tempo total de simulação = stepspersecond * seconds-->
-<simulationtime stepspersecond="10000" base="seconds">6</simulationtime>
+<simulationtime stepspersecond="10000" base="seconds">25</simulationtime>
 </configuration>
