@@ -32,7 +32,7 @@ public class USAMacRegularNode extends ApplicationLayer {
 
 	private int source = 1;
 	
-	private int target = 2;
+	private int target = 419;
 	
 	/** Ferramentas para exibir informações para a depuração do programa */
 	ToolsDebug debug = ToolsDebug.getInstance();

@@ -11,6 +11,7 @@ import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
 
+import br.ufla.dcc.PingPong.testing.TestScenarios;
 import br.ufla.dcc.grubix.simulator.Position;
 import br.ufla.dcc.grubix.simulator.kernel.Configuration;
 import br.ufla.dcc.grubix.simulator.movement.StartPositionGenerator;
@@ -45,7 +46,10 @@ public class FromConfigStartPositions extends StartPositionGenerator {
 		   for (Element elem : listPositions)
 		   {
                Position pos = new Position(Double.parseDouble(elem.getAttributeValue("x")), Double.parseDouble(elem.getAttributeValue("y")));
-               nos.put(Integer.parseInt(elem.getAttributeValue("id")),pos);
+               //Integer id = Integer.parseInt(elem.getAttributeValue("id"));
+               String idElement = elem.getAttributeValue("id");
+               nos.put(Integer.parseInt(idElement),pos);
+               TestScenarios.getInstance().evaluateTarget(Integer.parseInt(idElement), pos);
 		   }
 	   } catch (Exception e) { System.out.println("Error in file reading"); }
 	}

@@ -2,7 +2,7 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="configuration.xsd">
 <description write="BasicApplication"/>
 <field>
-    <dimension x="500" y="500"/>
+    <dimension x="300" y="300"/>
 </field>
 <physicalmodel>
     <class>br.ufla.dcc.grubix.simulator.physical.UnitDisc</class>
@@ -18,12 +18,12 @@
     <class>br.ufla.dcc.grubix.simulator.physical.CollisionPacketMangler</class>
 </bitmanglingmodel>
 <nodes>
-    <node name="REGULAR" count="1500">
+    <node name="REGULAR" count="700">
         <layers>
         	<application>
-                <class>br.ufla.dcc.PingPong.node.ProtocolComparisonList</class>
+                <class>br.ufla.dcc.PingPong.node.ProtocolComparisonPingPong</class>
                 <params>
-                	<param name="laps">0</param>
+                	<param name="transmissions">30</param>
                 </params>
             </application>
             <operatingSystem>
@@ -95,5 +95,5 @@
     </generated>
 </positions>
 <!--Tempo total de simulação = stepspersecond * seconds-->
-<simulationtime stepspersecond="10000" base="seconds">15</simulationtime>
+<simulationtime stepspersecond="10000" base="seconds">130</simulationtime>
 </configuration>

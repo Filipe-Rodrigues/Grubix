@@ -33,6 +33,7 @@ import br.ufla.dcc.PingPong.physicalMX.EventCollisionDetect;
 import br.ufla.dcc.PingPong.physicalMX.EventPhyTurnRadio;
 import br.ufla.dcc.PingPong.physicalMX.StartOfFrameDelimiter;
 import br.ufla.dcc.PingPong.routing.MXMac.MXMacRoutingControlPacket;
+import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.simulator.Direction;
 import br.ufla.dcc.grubix.simulator.LayerType;
 import br.ufla.dcc.grubix.simulator.NodeId;
@@ -160,6 +161,7 @@ public class MXMac extends MACLayer {
 			switchToBackbone(savestate.getBackboneNodeChannel(node.getId()));
 			xConf.setCycleSyncTiming(savestate.getNodeCycleSyncTiming(node.getId()));
 			xConf.setBackboneType(savestate.getBackboneNodeChannel(node.getId()));
+			SingletonTestResult.getInstance().countBackboneNode();
 		}
 		loadBackboneNeighborhood();
 		xStateMachine.changeStateBootNode();
@@ -186,14 +188,14 @@ public class MXMac extends MACLayer {
 
 	private int loadChannelConfiguration() {
 		if (xState.getRadioChannelMode() == MXMacConstants.TUNE_INTO_NEIGHBOR_CHANNEL) {
-			return getNodeBackboneType(xState.getDataPkt().getReceiver());
+			return getNodeBackboneTypeXITADO(xState.getDataPkt().getReceiver());
 		} else if (xState.getRadioChannelMode() == MXMacConstants.RESTORE_DEFAULT_CHANNEL) {
-			return getNodeBackboneType(node.getId());
+			return getNodeBackboneTypeXITADO(node.getId());
 		}
 		return MXMacConstants.KEEP_CHANNEL;
 	}
 	
-	private int getNodeBackboneType(NodeId id) {
+	private int getNodeBackboneTypeNAMORALZINHA(NodeId id) {
 		if (id.equals(savestate.getNextBackboneNode(node.getId()))) {
 			return xConf.getBackboneType();
 		} else if (node.getId().equals(id)) {
@@ -206,6 +208,17 @@ public class MXMac extends MACLayer {
 			}
 		}
 		return MXMacConstants.NON_BB_CHANNEL;
+	}
+	
+	private int getNodeBackboneTypeXITADO(NodeId id) {
+		if (id.equals(savestate.getNextBackboneNode(node.getId()))) {
+			return xConf.getBackboneType();
+		} else if (node.getId().equals(id)) {
+			return xConf.getBackboneType();
+		} else {
+			return savestate.getBackboneNodeChannel(id);
+		}
+		//return MXMacConstants.NON_BB_CHANNEL;
 	}
 	
 	private void loadBackboneNeighborhood() {

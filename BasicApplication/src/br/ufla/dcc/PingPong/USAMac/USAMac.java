@@ -45,6 +45,7 @@ import br.ufla.dcc.PingPong.physicalX.EventCollisionDetect;
 import br.ufla.dcc.PingPong.physicalX.EventPhyTurnRadio;
 import br.ufla.dcc.PingPong.physicalX.StartOfFrameDelimiter;
 import br.ufla.dcc.PingPong.routing.USAMac.USAMacRoutingControlPacket;
+import br.ufla.dcc.PingPong.testing.SingletonTestResult;
 import br.ufla.dcc.grubix.xml.ConfigurationException;
 import br.ufla.dcc.grubix.xml.ShoXParameter;
 
@@ -136,6 +137,7 @@ public class USAMac extends MACLayer {
 			switchToBackbone();
 			double cycleRatio = BackboneConfigurationManager.getInstance(USAMAC_CONFIG).getNodeCycleSyncTiming(node.getId());
 			xConf.setCycleSyncTiming(cycleRatio);
+			SingletonTestResult.getInstance().countBackboneNode();
 		}
 		xStateMachine.changeStateBootNode();
 		createtWucTimeOut();

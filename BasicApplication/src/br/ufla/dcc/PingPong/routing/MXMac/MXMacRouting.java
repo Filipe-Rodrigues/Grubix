@@ -30,7 +30,8 @@ import br.ufla.dcc.grubix.xml.ShoXParameter;
 
 public class MXMacRouting extends NetworkLayer {
 
-	private static final int BASE_DELAY_FOR_BB_FORMATION = 40450;
+	@ShoXParameter(description = "Espaço de tempo para formação de um segmento sem interferências.", defaultValue = "40450.0d")
+	private double bbFromationDelay = 40450;
 	
 	@ShoXParameter(description = "Porção máxima do campo em que os backbones poderão se propagar. 1 = 100% do campo.", defaultValue = "0.96d")
 	private double backboneBoundaryRatio;
@@ -192,7 +193,7 @@ public class MXMacRouting extends NetworkLayer {
 		bbSettings.setDirection(direction);
 		expandBackbone(BackboneDistributor.selectNextBackboneNode(bbSettings));
 		if (delayLevel > 0) {
-			sendEventSelf(new BackboneNotificationWUC(sender, BASE_DELAY_FOR_BB_FORMATION * delayLevel));
+			sendEventSelf(new BackboneNotificationWUC(sender, bbFromationDelay * delayLevel));
 		} else {
 			announceConversion();
 		}

@@ -191,7 +191,7 @@ public class BackboneConfigurationManager implements Serializable {
 		if (amIBackbone(myId)) {
 			return allNodesConfigurations.get(myId).backboneChannel;
 		}
-		return -1;
+		return 0;
 	}
 	
 	public void setNodeCycleSyncTiming(NodeId myId, double cycleTimeBase) {

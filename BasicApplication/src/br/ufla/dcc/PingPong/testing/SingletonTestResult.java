@@ -61,6 +61,7 @@ public class SingletonTestResult {
 		nodeInfo = new TreeMap<>();
 		startSimulationTime = 0;
 		endSimulationTime = 0;
+		backboneCounter = 0;
 		enabled = false;
 	}
 
@@ -103,14 +104,14 @@ public class SingletonTestResult {
 			tick = SimulationManager.getInstance().getCurrentTime();
 		} else {
 			tock = SimulationManager.getInstance().getCurrentTime();
-			System.out.println(tock - tick);
+			System.out.println((tock - tick) / 10000.0d);
 			timeAccumulated += (tock - tick);
 			tick = tock = -1;
 		}
 	}
 
 	public double getAccumulatedTime() {
-		return timeAccumulated;
+		return timeAccumulated / 10000.0d;
 	}
 	
 	public void setEnabled(boolean enabled) {
@@ -133,6 +134,10 @@ public class SingletonTestResult {
 		backboneCounter++;
 	}
 
+	public int getBackboneCount() {
+		return backboneCounter;
+	}
+	
 	public void countHop() {
 		if (enabled) {
 			hopNumber++;
